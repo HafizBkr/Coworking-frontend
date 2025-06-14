@@ -56,7 +56,7 @@ export function HeaderDashboard() {
         <div className='max-w-52 w-full'>
             <WorkSpaceSwitcher workspaces={workspaces}/>
         </div>
-        <div className='border-l px-4'>
+        <div className='border-l flex items-center px-4'>
             <NotifyButton/>
             <UserProfile/>
         </div>
@@ -83,7 +83,7 @@ function NotifyButton() {
     >
       <BellIcon size={16} aria-hidden="true" />
       {count > 0 && (
-        <Badge className="absolute -top-2 left-full min-w-5 -translate-x-1/2 px-1">
+        <Badge className="absolute -top-2 rounded-full left-full min-w-5 -translate-x-1/2 px-1">
           {count > 99 ? "99+" : count}
         </Badge>
       )}
