@@ -1,8 +1,9 @@
+/* eslint-disable react/react-in-jsx-scope */
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { AlertCircle, FolderOpen, Plus } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 type DashboardCardProps = {
@@ -13,12 +14,22 @@ type DashboardCardProps = {
   className?: string
 }
 
+
+// type VirtualSpaceCardItemProps = {
+//   status?: "disponible" | "occupé" | "en reunion"
+// }
+
 export default function DashboardPage() {
   // await new Promise((resolve) => setTimeout(resolve, 5000))
   return (
-    <section className='h-[calc(100svh-4rem)] overflow-y-auto p-8 space-y-4 bg-secondary w-full'>
+    <section className='h-[calc(100svh-4rem)] overflow-y-auto p-8 space-y-4 bg-secondary/50 w-full'>
       <WelcomeBar/>
-      <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+        <DashboardCard 
+          label='Projets actifs' 
+          count={3} 
+          illustration='/icons/projet.svg'
+          />
         <DashboardCard 
           label='Membres en ligne' 
           count={10} 
@@ -39,9 +50,7 @@ export default function DashboardPage() {
       </div>
       <div className='grid md:grid-cols-2 gap-4'>
         <UrgentTaskCard/>
-        <div className='rounded-xl bg-background shadow-lg'>
-
-        </div>
+        <VirtualSpaceCard/>
       </div>
     </section>
   )
@@ -67,7 +76,7 @@ function WelcomeBar() {
 function DashboardCard(props:DashboardCardProps){
   return(
     <div className={cn('shadow-lg group flex  justify-between w-full h-32 overflow-hidden bg-background rounded-xl',props.className)}>
-      <div className='flex flex-col p-4 h-full gap-4'>
+      <div className='flex flex-col p-4 h-full gap-2'>
         <h1 className='text-lg font-semibold'>{props.label}</h1>
         <div>
           <span className='text-4xl font-bold'>{props.count}</span>
@@ -95,8 +104,8 @@ function UrgentTaskCardItem(){
         <div className='w-full space-y-1'>
           <h1 className='font-semibold'>Finaliser la presentation du projet</h1>
           <div className='flex justify-between'>
-            <Badge className='bg-primary/20 text-black rounded-full'>E-commerce app</Badge>
-            <span className='text-sm text-muted-foreground'>.50 min</span>
+            <Badge className='bg-primary/20 text-black dark:text-white rounded-full'>E-commerce app</Badge>
+            <span className='text-sm text-muted-foreground'>3 juin 2023</span>
           </div>
         </div>
       </div>
@@ -124,8 +133,8 @@ function UrgentTaskCard(){
             />
         </div>
       </div>
-      <div className='relative rounded-xl border bg-secondary/20 m-4 overflow-hidden'>
-      {/* <div className="pointer-events-none absolute inset-x-0 top-0 h-[10%] bg-gradient-to-b from-background"></div> */}
+      <div className='relative rounded-xl  m-4 overflow-hidden'>
+      <div className="pointer-events-none absolute z-10 inset-x-0 top-0 h-[6%] bg-gradient-to-b from-background"></div> 
         <ScrollArea className='h-72 '>
           <div className='p-4 space-y-4'>
             {Array.from({ length: 10 }).map((_, index) => (
@@ -133,10 +142,60 @@ function UrgentTaskCard(){
             ))}
           </div>
         </ScrollArea>
-        {/* <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[10%] bg-gradient-to-t from-background"></div> */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[10%] bg-gradient-to-t from-background"></div>
       </div>
     </div>
   )
 }
 
+
+
+function VirtualSpaceCardItem(){
+  return (
+    <div className='flex justify-between'>
+      <div className='flex gap-2'>
+        <div className='size-14 shrink-0 rounded-full bg-primary'/>
+        <div>
+          <h1 className='text-xl font-semibold'>John doe</h1>
+          <p className='text-muted-foreground'>Developpeur frontend</p>
+        </div>
+      </div>
+      <div>
+        <Badge variant={"secondary"} className='rounded-full'>Disponible</Badge>
+      </div>
+    </div>
+  );
+}
+
+function VirtualSpaceCard(){
+  return (
+    <div className='rounded-xl bg-background shadow-lg'>
+      <div className='flex p-4 justify-between h-16 overflow-hidden items-enter'>
+        <div>
+          <h1 className='font-bold text-xl'>Espace virtuel</h1>
+          <p className='text-muted-foreground'>Membres actuellement connectés</p>
+        </div>
+        <div className='relative size-24'>
+          <Image 
+            src={"/icons/virtual.svg"}
+            alt='/icons/virtual.svg'
+            fill
+            className='-translate-y-6'
+            />
+        </div>
+      </div>
+      <div className='relative rounded-xl m-4 overflow-hidden'>
+      <div className="pointer-events-none z-10 absolute inset-x-0 top-0 h-[6%] bg-gradient-to-b from-background"></div>
+        <ScrollArea className='h-72 '>
+          <div className='space-y-4 m-4'>
+            {Array.from({ length: 10 }).map((_,index)=>(
+              <VirtualSpaceCardItem key={index}/>
+            ))}
+          </div>
+        </ScrollArea>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[10%] bg-gradient-to-t from-background"></div>
+      </div>
+    </div>
+  )
+}
 

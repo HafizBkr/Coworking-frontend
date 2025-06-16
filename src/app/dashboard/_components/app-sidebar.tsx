@@ -1,5 +1,5 @@
 "use client";
-import { BookOpen, Calendar, LayoutDashboard, Package, Sparkles, Users } from "lucide-react";
+import { CalendarDays, FolderOpen, LayoutDashboard, MailboxIcon, Video } from "lucide-react";
 import type * as React from "react";
 
 import { Logo } from "@/components/customs/logo";
@@ -16,8 +16,10 @@ import {
   SidebarTrigger,
   useSidebar
 } from "@/components/ui/sidebar";
+import { routes } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import { Pacifico } from "next/font/google";
+import { usePathname } from "next/navigation";
 
 // Menu data structure
 
@@ -28,74 +30,34 @@ const pacifico = Pacifico({
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { open } = useSidebar()
+    const pathname = usePathname()
     const menuItems = [
       {
-        title: "Calendar",
-        icon: Calendar,
-        url: "#",
-      },
-      {
-        title: "Sparkles",
-        icon: Sparkles,
-        url: "#",
-      },
-      {
-        title: "Dashboard",
+        title: "Tableau de bord",
         icon: LayoutDashboard,
-        url: "#",
-        isActive: true,
+        url: routes.dashboard.home,
+        isActive: pathname === routes.dashboard.home,
       },
       {
-        title: "Bookings",
-        icon: BookOpen,
-        url: "#",
-        items: [
-          {
-            title: "View Available Options",
-            url: "#",
-          },
-          {
-            title: "Calendar",
-            url: "#",
-          },
-          {
-            title: "Floor Plan",
-            url: "#",
-          },
-        ],
+        title: "Calendrier",
+        icon: CalendarDays,
+        url: routes.dashboard.calendar,
+        isActive: pathname === routes.dashboard.calendar,
       },
       {
-        title: "Products and Services",
-        icon: Package,
+        title: "Projets",
+        icon: FolderOpen,
         url: "#",
       },
       {
-        title: "Community",
-        icon: Users,
+        title: "Messagerie",
+        icon: MailboxIcon,
         url: "#",
-        items: [
-          {
-            title: "Discussion Boards",
-            url: "#",
-          },
-          {
-            title: "Virtual Rooms",
-            url: "#",
-            isActive: true,
-          },
-          {
-            title: "Articles",
-            url: "#",
-          },
-          {
-            title: "Events",
-            url: "#",
-          },
-          {
-            title: "Directory",
-            url: "#",
-          },
-        ],
+      },
+      {
+        title: "Reunions",
+        icon: Video,
+        url: "#",
       },
     ]
     
@@ -121,7 +83,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={item.title} className="h-14" isActive={item.isActive}>
                       <a href={item.url}>
-                        <item.icon strokeWidth={1.5} />
+                        <item.icon className={cn({
+                          "text-primary": item.isActive
+                        })} strokeWidth={1.5} />
                         <span className="text-lg">{item.title}</span>
                       </a>
                     </SidebarMenuButton>

@@ -4,11 +4,13 @@ import { canAccesDashboard, shouldRedirectToLogin } from "./guards/auth.guard";
 import { routes } from "./config/routes";
 
 // specifier les routes public et privee !
-const protectedRoutes = [routes.dashboard.home];
+const protectedRoutes = ["/dedkjnei"];
 const publicRoutes = [
     routes.auth.signin,
     routes.auth.signup,
-    routes.auth.otp
+    routes.auth.otp,
+    routes.dashboard.home,
+    routes.dashboard.calendar
 ];
 
 export default async function middleware(req: NextRequest) {
@@ -18,13 +20,13 @@ export default async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.includes(path);
   const isLoggedIn = session?.isAuthenticated ?? false;
 
-//   if (shouldRedirectToLogin(isLoggedIn, isProtectedRoute)) {
-//     return NextResponse.redirect(new URL(routes.auth.signin, req.nextUrl));
-//   }
+  if (shouldRedirectToLogin(isLoggedIn, isProtectedRoute)) {
+    return NextResponse.redirect(new URL(routes.auth.signin, req.nextUrl));
+  }
 
-//   if (canAccesDashboard(isLoggedIn, isPublicRoute)) {
-//     return NextResponse.redirect(new URL(routes.dashboard.home, req.nextUrl));
-//   }
+  if (canAccesDashboard(isLoggedIn, isPublicRoute)) {
+    return NextResponse.redirect(new URL(routes.dashboard.home, req.nextUrl));
+  }
 
   return NextResponse.next();
   

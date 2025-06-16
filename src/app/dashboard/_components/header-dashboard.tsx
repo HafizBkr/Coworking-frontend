@@ -31,6 +31,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
+import { ModeToggle } from '@/components/customs/toggle-theme';
 
 const workspaces =  [
   {
@@ -56,7 +57,8 @@ export function HeaderDashboard() {
         <div className='max-w-52 w-full'>
             <WorkSpaceSwitcher workspaces={workspaces}/>
         </div>
-        <div className='border-l flex items-center px-4'>
+        <div className='border-l flex gap-4 items-center px-4'>
+            <ModeToggle/>
             <NotifyButton/>
             <UserProfile/>
         </div>

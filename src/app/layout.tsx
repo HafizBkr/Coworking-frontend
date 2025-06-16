@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 const nunito_sans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -20,11 +21,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="h-full">
+    <html lang="fr" className="h-full" suppressHydrationWarning>
       <body
         className={`${nunito_sans.className} antialiased h-full`}
       >
+      <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
         {children}
+        </ThemeProvider>
       </body>
     </html>
   );
