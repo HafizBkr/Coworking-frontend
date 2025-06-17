@@ -22,7 +22,7 @@ type DashboardCardProps = {
 export default function DashboardPage() {
   // await new Promise((resolve) => setTimeout(resolve, 5000))
   return (
-    <section className='h-[calc(100svh-4rem)] overflow-y-auto p-8 space-y-4 bg-secondary/50 w-full'>
+    <section className='min-h-[calc(100svh-4rem)] overflow-y-auto p-8 space-y-4 bg-secondary/50 w-full'>
       <WelcomeBar/>
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
         <DashboardCard 
@@ -48,7 +48,7 @@ export default function DashboardPage() {
           className="max-md:col-span-2"
           />
       </div>
-      <div className='grid md:grid-cols-2 gap-4'>
+      <div className='grid md:grid-cols-2 gap-4 '>
         <UrgentTaskCard/>
         <VirtualSpaceCard/>
       </div>
@@ -66,16 +66,16 @@ function WelcomeBar() {
         </div>
         <Button>
           <Plus/>
-          Gerer les taches
+          Inviter un membre
         </Button>
-      </div>
+    </div>
   )
 }
 
 
 function DashboardCard(props:DashboardCardProps){
   return(
-    <div className={cn('shadow-lg group flex  justify-between w-full h-32 overflow-hidden bg-background rounded-xl',props.className)}>
+    <div className={cn('shadow-lg group flex  justify-between w-full h-full overflow-hidden bg-background rounded-xl',props.className)}>
       <div className='flex flex-col p-4 h-full gap-2'>
         <h1 className='text-lg font-semibold'>{props.label}</h1>
         <div>
@@ -118,8 +118,8 @@ function UrgentTaskCardItem(){
 
 function UrgentTaskCard(){
   return (
-    <div className='bg-background shadow-lg rounded-xl'>
-      <div className='flex p-4 justify-between h-16 overflow-hidden items-enter'>
+    <div className='bg-background shadow-lg h-full rounded-xl'>
+      <div className='flex p-4 justify-between h-16  overflow-hidden items-enter'>
         <div>
           <h1 className='font-bold text-xl'>Taches urgente</h1>
           <p className='text-muted-foreground'>Tâches nécessitant une attention immédiate</p>
@@ -169,7 +169,7 @@ function VirtualSpaceCardItem(){
 
 function VirtualSpaceCard(){
   return (
-    <div className='rounded-xl bg-background shadow-lg'>
+    <div className='rounded-xl h-full bg-background shadow-lg'>
       <div className='flex p-4 justify-between h-16 overflow-hidden items-enter'>
         <div>
           <h1 className='font-bold text-xl'>Espace virtuel</h1>

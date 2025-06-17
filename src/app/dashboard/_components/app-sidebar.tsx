@@ -1,11 +1,12 @@
 "use client";
-import { CalendarDays, FolderOpen, LayoutDashboard, MailboxIcon, Video } from "lucide-react";
+import { CalendarDays, FolderOpen, LayoutDashboard, LogOut, MailboxIcon, Video } from "lucide-react";
 import type * as React from "react";
 
 import { Logo } from "@/components/customs/logo";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -20,6 +21,7 @@ import { routes } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import { Pacifico } from "next/font/google";
 import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 // Menu data structure
 
@@ -47,7 +49,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {
         title: "Projets",
         icon: FolderOpen,
-        url: "#",
+        url: routes.dashboard.projects,
+        isActive: pathname === routes.dashboard.projects,
       },
       {
         title: "Messagerie",
@@ -57,7 +60,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {
         title: "Reunions",
         icon: Video,
-        url: "#",
+        url: routes.dashboard.meet,
+        isActive: pathname === routes.dashboard.meet,
       },
     ]
     
@@ -84,7 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarMenuButton asChild tooltip={item.title} className="h-14" isActive={item.isActive}>
                       <a href={item.url}>
                         <item.icon className={cn({
-                          "text-primary": item.isActive
+                          // "text-primary": item.isActive
                         })} strokeWidth={1.5} />
                         <span className="text-lg">{item.title}</span>
                       </a>
@@ -96,6 +100,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarRail />
+      <SidebarFooter className="bg-background">
+        <Button variant={"outline"} >
+          <LogOut/>
+          <span hidden={!open}>Deconnexion</span>
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   )
 }

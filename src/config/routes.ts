@@ -2,7 +2,9 @@ export const routes = {
     home:"/",
     dashboard:{
         home: "/dashboard",
-        calendar: "/dashboard/calendar"
+        calendar: "/dashboard/calendar",
+        projects: "/dashboard/projects",
+        meet: "/dashboard/meet"
     },
     auth:{
         signin:"/signin",

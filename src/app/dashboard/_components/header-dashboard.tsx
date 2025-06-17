@@ -32,6 +32,9 @@ import {
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
 import { ModeToggle } from '@/components/customs/toggle-theme';
+import { createAvatar } from '@dicebear/core';
+import { glass } from '@dicebear/collection';
+
 
 const workspaces =  [
   {
@@ -57,7 +60,7 @@ export function HeaderDashboard() {
         <div className='max-w-52 w-full'>
             <WorkSpaceSwitcher workspaces={workspaces}/>
         </div>
-        <div className='border-l flex gap-4 items-center px-4'>
+        <div className=' flex gap-4 items-center px-4'>
             <ModeToggle/>
             <NotifyButton/>
             <UserProfile/>
@@ -85,7 +88,7 @@ function NotifyButton() {
     >
       <BellIcon size={16} aria-hidden="true" />
       {count > 0 && (
-        <Badge className="absolute -top-2 rounded-full left-full min-w-5 -translate-x-1/2 px-1">
+        <Badge className="absolute -top-2 rounded-full left-full min-w-5 -translate-x-1/2 px-1 dark:text-white">
           {count > 99 ? "99+" : count}
         </Badge>
       )}
@@ -95,13 +98,16 @@ function NotifyButton() {
 
   
 function UserProfile() {
+  
+    const avatar = createAvatar(glass);
+    const svg = avatar.toDataUri()
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-auto ring-0 focus-visible:ring-0 p-0 hover:bg-transparent">
             <div className='flex gap-2'>
                 <Avatar>
-                    <AvatarImage src="./avatar.jpg" alt="Profile image" />
+                    <AvatarImage src={svg} alt="Profile image" />
                     <AvatarFallback>KK</AvatarFallback>
                 </Avatar>
                 <div className='flex flex-col justify-center items-start'>
