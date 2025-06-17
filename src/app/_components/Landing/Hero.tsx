@@ -52,7 +52,7 @@ const HeroSection: React.FC = () => {
           >
             <img
               src="/landing-main.webp"
-              alt="Hero"
+              alt="Coworking en ligne"
               className="w-full  mx-auto  object-cover"
               style={{
                 transform: `translateY(${scrollY * 0.05}px)`,
@@ -75,10 +75,10 @@ const HeroSection: React.FC = () => {
             style={{ transitionDelay: "600ms" }}
           >
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 leading-tight">
-              Tout-en-une HR
+              Plateforme de coworking en ligne
               <br />
               <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                platforme
+                Tout-en-un
               </span>
             </h1>
           </div>
@@ -93,9 +93,9 @@ const HeroSection: React.FC = () => {
             style={{ transitionDelay: "800ms" }}
           >
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Work. est une plateforme RH moderne tout-en-un
-              <br className="hidden md:block" />
-              adapter parfaitement aux besoins de votre entreprise.
+              Gérez vos espaces de travail, projets, discussions en direct et
+              réunions vidéo, le tout depuis une interface centralisée et
+              sécurisée.
             </p>
           </div>
 
@@ -113,7 +113,7 @@ const HeroSection: React.FC = () => {
               className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-full text-lg font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 min-w-[200px]"
               type="button"
             >
-              Request a Demo
+              Découvrir la plateforme
             </button>
           </div>
         </div>
