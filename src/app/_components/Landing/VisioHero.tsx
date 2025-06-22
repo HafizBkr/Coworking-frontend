@@ -5,7 +5,6 @@ import {
   MicOff,
   Video,
   VideoOff,
-  Phone,
   PhoneOff,
   MessageCircle,
   MoreHorizontal,
@@ -26,7 +25,7 @@ interface Participant {
 const VideoConferenceComponent: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [isRecording, setIsRecording] = useState(true);
+  const [isRecording, ] = useState(true);
 
   const participants: Participant[] = [
     {
@@ -43,7 +42,7 @@ const VideoConferenceComponent: React.FC = () => {
     },
   ];
 
-  const mainSpeaker = participants[0];
+  // const mainSpeaker = participants[0];
 
   return (
     <div className="py-16 px-8 w-full max-w-7xl mx-auto bg-gray-100 rounded-2xl overflow-hidden shadow-2xl">

@@ -1,10 +1,10 @@
 /* eslint-disable react/react-in-jsx-scope */
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { AlertCircle, Plus } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import Image from 'next/image';
+import { WelcomeBar } from './_components/welcome-bar';
 
 type DashboardCardProps = {
   label: string;
@@ -57,20 +57,7 @@ export default function DashboardPage() {
 }
 
 
-function WelcomeBar() {
-  return (
-    <div className='w-full flex justify-between'>
-        <div>
-          <h1 className='text-4xl font-bold'>Salut John,</h1>
-          <p className='text-muted-foreground text'>Vous voulez faire quoi aujourd&apos;hui ?</p>
-        </div>
-        <Button>
-          <Plus/>
-          Inviter un membre
-        </Button>
-    </div>
-  )
-}
+
 
 
 function DashboardCard(props:DashboardCardProps){

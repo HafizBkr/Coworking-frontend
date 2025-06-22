@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { Toaster } from "sonner";
 
 const nunito_sans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -31,7 +32,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-        {children}
+          {children}
+          <Toaster richColors expand closeButton/>
         </ThemeProvider>
       </body>
     </html>

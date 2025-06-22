@@ -1,5 +1,5 @@
 "use client";
-import { CalendarDays, FolderOpen, LayoutDashboard, LogOut, MailboxIcon, Video } from "lucide-react";
+import { CalendarDays, FolderOpen, LayoutDashboard, MailboxIcon, Video } from "lucide-react";
 import type * as React from "react";
 
 import { Logo } from "@/components/customs/logo";
@@ -21,7 +21,7 @@ import { routes } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import { Pacifico } from "next/font/google";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { LogoutButton } from "./logout-button";
 
 // Menu data structure
 
@@ -32,7 +32,7 @@ const pacifico = Pacifico({
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { open } = useSidebar()
-    const pathname = usePathname()
+    const pathname = usePathname();
     const menuItems = [
       {
         title: "Tableau de bord",
@@ -101,10 +101,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarRail />
       <SidebarFooter className="bg-background">
-        <Button variant={"outline"} >
-          <LogOut/>
-          <span hidden={!open}>Deconnexion</span>
-        </Button>
+        <LogoutButton/>
       </SidebarFooter>
     </Sidebar>
   )

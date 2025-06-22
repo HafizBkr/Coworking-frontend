@@ -1,3 +1,4 @@
+/* eslint-disable react/react-in-jsx-scope */
 import { Users, Shield, TrendingUp, Calendar } from "lucide-react";
 
 export default function BuiltForEveryone() {
@@ -10,8 +11,8 @@ export default function BuiltForEveryone() {
             Conçu pour tous les membres de votre communauté
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Que vous soyez freelance, manager ou membre d'une équipe, notre
-            plateforme s'adapte à vos besoins pour collaborer efficacement en
+            Que vous soyez freelance, manager ou membre d&apos;une équipe, notre
+            plateforme s&apos;adapte à vos besoins pour collaborer efficacement en
             ligne.
           </p>
         </div>

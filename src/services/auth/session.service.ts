@@ -1,10 +1,16 @@
 "use server"
+import { User } from "@/models/user.model";
 import { deleteSession, verifySession } from "@/server/session"
+import { cache } from "react";
 
-export async function getSession() {
+export const getSession = cache(async()=>{
     const session = await verifySession()
-    return session
-}
+    return {
+        data: session?.data as User|null,
+        isAuthenticated: session?.isAuthenticated,
+        token: session?.token
+    }
+})
 
 export async function Logout(){
     try{

@@ -1,4 +1,4 @@
-import Image from "next/image";
+/* eslint-disable react/react-in-jsx-scope */
 import { User } from "lucide-react";
 
 export default function CoreHRHero() {
