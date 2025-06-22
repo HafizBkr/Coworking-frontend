@@ -14,7 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSession } from "@/hooks/use-session";
-import { BoltIcon, BookOpenIcon, ChevronDownIcon, Layers2Icon, LogOutIcon } from "lucide-react";
+import { BoltIcon, BookOpenIcon, ChevronDownIcon, Layers2Icon, Loader2 } from "lucide-react";
+import { LogoutButton } from "./logout-button";
 
 export function UserProfile() {
     const { user, isLoading } = useSession();
@@ -24,7 +25,7 @@ export function UserProfile() {
     const svg = avatar.toDataUri()
 
     if(isLoading){
-      return  "chargement..."
+      return  <Button variant={"outline"}> <Loader2 className="animate-spin"/> <span className="text-muted-foreground">chargement</span></Button>
     }
 
     return (
@@ -72,9 +73,8 @@ export function UserProfile() {
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <LogOutIcon size={16} className="opacity-60" aria-hidden="true" />
-            <span>Deconnexion</span>
+          <DropdownMenuItem asChild className="w-full">
+           <LogoutButton/>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

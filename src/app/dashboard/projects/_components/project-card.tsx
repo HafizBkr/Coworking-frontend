@@ -2,7 +2,7 @@ import { glass } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
 import Image from 'next/image'
 import React from 'react'
-import { EllipsisIcon } from "lucide-react"
+import { Edit, EllipsisIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -60,10 +60,8 @@ function OptionsProjects() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem>Option 1</DropdownMenuItem>
-          <DropdownMenuItem>Option 2</DropdownMenuItem>
-          <DropdownMenuItem>Option 3</DropdownMenuItem>
-          <DropdownMenuItem>Option 4</DropdownMenuItem>
+          <DropdownMenuItem><Edit/>Modifier</DropdownMenuItem>
+          <DropdownMenuItem variant='destructive'><Trash2Icon/>Supprimer</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     )

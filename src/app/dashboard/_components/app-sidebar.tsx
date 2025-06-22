@@ -1,5 +1,5 @@
 "use client";
-import { CalendarDays, FolderOpen, LayoutDashboard, MailboxIcon, Video } from "lucide-react";
+import { CalendarDays, FolderOpen, LayoutDashboard, MailboxIcon, SettingsIcon, Video } from "lucide-react";
 import type * as React from "react";
 
 import { Logo } from "@/components/customs/logo";
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Pacifico } from "next/font/google";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "./logout-button";
+import { useWorkspaceStore } from "@/stores/workspace.store";
 
 // Menu data structure
 
@@ -33,6 +34,7 @@ const pacifico = Pacifico({
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { open } = useSidebar()
     const pathname = usePathname();
+    const { currentWorkspace } = useWorkspaceStore();
     const menuItems = [
       {
         title: "Tableau de bord",
@@ -45,24 +47,35 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: CalendarDays,
         url: routes.dashboard.calendar,
         isActive: pathname === routes.dashboard.calendar,
+        isHide: !currentWorkspace
       },
       {
         title: "Projets",
         icon: FolderOpen,
         url: routes.dashboard.projects,
         isActive: pathname === routes.dashboard.projects,
+        isHide: !currentWorkspace
       },
       {
         title: "Messagerie",
         icon: MailboxIcon,
         url: "#",
+        isHide: !currentWorkspace
       },
       {
         title: "Reunions",
         icon: Video,
         url: routes.dashboard.meet,
         isActive: pathname === routes.dashboard.meet,
+        isHide: !currentWorkspace
       },
+      {
+        title: "Parametres",
+        icon: SettingsIcon,
+        url: routes.dashboard.meet,
+        isActive: pathname === routes.dashboard.meet,
+        isHide: !currentWorkspace
+      }
     ]
     
   return (

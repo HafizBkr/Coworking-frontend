@@ -61,7 +61,8 @@ export function SigninForm() {
         <FieldError message={errors.password?.[0]}/>
       </div>
       <Button loading={isPending} className='w-full'>Se connecter</Button> 
-      <div className='w-full text-sm flex justify-center'>
+      <div className='w-full text-sm flex flex-col gap-4 items-center justify-center'>
+        <Link className='text-muted-foreground font-semibold' href={routes.auth.forgot}>Mot de passe oublié ?</Link>
         <span>Vous n&apos;avez pas de compte ? <Link className='text-primary' href={routes.auth.signup}>S&apos;inscricre</Link></span>
       </div>        
     </form>

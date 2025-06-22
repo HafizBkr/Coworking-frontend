@@ -10,5 +10,8 @@ export const routes = {
         signin:"/signin",
         signup: "/signup",
         otp:"/otp",
+        forgot:"/forgot-password",
+        forgot_otp:"/forgot-password/otp",
+        reset_password:"/reset-password"
     }
 }

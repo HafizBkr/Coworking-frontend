@@ -26,8 +26,8 @@ import { useWorkspaceStore } from "@/stores/workspace.store";
 export function WorkSpaceSwitcher() {
   const { isMobile } = useSidebar();
   const { setCurrentWorkspace, currentWorkspace } = useWorkspaceStore();
-  const [openDialog, setOpenDialog] = React.useState(false);
   const { workspaces }= useWorkspaces();
+  const [openDialog, setOpenDialog] = React.useState(false);
 
   // if(!workspaces?.[0]){
   //   return null
@@ -53,8 +53,8 @@ export function WorkSpaceSwitcher() {
                 <ProportionsIcon  className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{currentWorkspace?.name||"Workspaces"}</span>
-                <span className="truncate text-xs">{currentWorkspace?.description||"Selectionner un workspace"}</span>
+                <span className="truncate font-semibold">{currentWorkspace?.name||"Workspaces"}</span>
+                <span className="truncate text-muted-foreground text-xs">{currentWorkspace?.description||"Selectionner un workspace"}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>

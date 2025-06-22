@@ -20,7 +20,7 @@ export function LogoutButton() {
   }
 
   return (
-    <Button loading={isPending} onClick={handleLogout} variant={"outline"} >
+    <Button className='w-full' loading={isPending} onClick={handleLogout} variant={"outline"} >
         <LogOut/>
         <span hidden={!open}>Deconnexion</span>
     </Button>

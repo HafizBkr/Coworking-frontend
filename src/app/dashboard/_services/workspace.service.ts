@@ -24,6 +24,25 @@ export async function getWorkspaces():Promise<APIResponse>{
     }
 }
 
+export async function getActiveUsersWorkspaces(workspaceId: string):Promise<APIResponse>{
+    const res = await api.get(endpoint+`/${workspaceId}/active-users`);
+
+    console.log({log:res.data})
+    if(res?.data?.error){
+        return {
+            success: false,
+            message: res?.data.error||"Une erreur s'est produite de la recuperation membres actives du workspace",
+        }
+    }
+
+    return {
+        success: true,
+        message: "Recuperation des membres actives workspace reussie !",
+        data: res.data.data
+    }
+}
+
+
 export async function createWorkspace(formData:FormData):Promise<APIResponse>{
     const name = formData.get("name");
     const description = formData.get("description");
@@ -61,3 +80,4 @@ export async function createWorkspace(formData:FormData):Promise<APIResponse>{
         data: res.data
     }
 }
+

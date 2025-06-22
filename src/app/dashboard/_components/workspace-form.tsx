@@ -35,7 +35,7 @@ export function WorkspaceForm() {
     })
   }
   return (
-    <div className='max-w-sm flex flex-col gap-4 items-center w-full bg-background rounded-xl shadow-xl'>
+    <div className='max-w-sm flex flex-col gap-4 items-center w-full'>
     <div className='flex flex-col items-center gap-2'>
       <div className='flex gap-2'>
         <h1 className={`text-2xl font-bold text-center`}>Creation de workspace</h1>

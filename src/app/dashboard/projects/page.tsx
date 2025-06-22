@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import React from 'react'
 import { ProjectList } from './_components/project-list'
+import { Input } from '@/components/ui/input'
 
 export default function ProjectsPage() {
   return (
@@ -15,15 +16,20 @@ export default function ProjectsPage() {
 
 function NavBar() {
   return (
-    <div className='w-full flex justify-between items-end'>
-        <div>
-          <h1 className='text-4xl font-bold'>Projets</h1>
-          <p className='text-muted-foreground text'>Vous pouvez gerer vos projets ici.</p>
-        </div>
-        <Button>
-          <Plus/>
-          Creer un projet
-        </Button>
+    <div className='space-y-5'>
+      <div className='w-full flex justify-between items-end'>
+          <div>
+            <h1 className='text-4xl font-bold'>Projets</h1>
+            <p className='text-muted-foreground text'>Vous pouvez gerer vos projets ici.</p>
+          </div>
+          <Button>
+            <Plus/>
+            Creer un projet
+          </Button>
+      </div>
+      <div>
+        <Input placeholder='Rechercher par nom' className='bg-background'/>
+      </div>
     </div>
   )
 }
