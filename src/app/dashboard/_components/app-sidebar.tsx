@@ -20,7 +20,7 @@ import {
 import { routes } from "@/config/routes";
 import { cn } from "@/lib/utils";
 import { Pacifico } from "next/font/google";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogoutButton } from "./logout-button";
 import { useWorkspaceStore } from "@/stores/workspace.store";
 
@@ -34,6 +34,7 @@ const pacifico = Pacifico({
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { open } = useSidebar()
     const pathname = usePathname();
+    const router = useRouter();
     const { currentWorkspace } = useWorkspaceStore();
     const menuItems = [
       {
@@ -53,7 +54,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Projets",
         icon: FolderOpen,
         url: routes.dashboard.projects,
-        isActive: pathname === routes.dashboard.projects,
+        isActive: pathname.includes(routes.dashboard.projects),
         isHide: !currentWorkspace
       },
       {
@@ -98,13 +99,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={item.title} className="h-14" isActive={item.isActive}>
-                      <a href={item.url}>
+                    <SidebarMenuButton
+                      onClick={()=>router.push(item.url)}
+                     asChild tooltip={item.title} className="h-14" isActive={item.isActive}>
+                      <div className="cursor-pointer">
                         <item.icon className={cn({
                           // "text-primary": item.isActive
                         })} strokeWidth={1.5} />
                         <span className="text-lg">{item.title}</span>
-                      </a>
+                      </div>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

@@ -4,16 +4,20 @@ import { ModeToggle } from '@/components/customs/toggle-theme';
 // import { NotifyButton } from "./notify-button";
 import { UserProfile } from "./user-profile";
 import { WorkSpaceSwitcher } from './workspace-switcher';
+import { Input } from '@/components/ui/input';
 
 
 export function HeaderDashboard() {
 
   return (
-    <header className='border-b flex items-center justify-between  p-2 h-16 '>
+    <header className='border-b flex items-center gap-2 justify-between  p-2 h-16 '>
         <div className='max-w-52 w-full'>
             <WorkSpaceSwitcher />
         </div>
-        <div className=' flex gap-4 items-center px-4'>
+        <div className='w-full'>
+          <Input className='shadow-none bg-secondary' placeholder='rechercher...'/>
+        </div>
+        <div className=' flex gap-2 items-center'>
             <ModeToggle/>
             {/* <NotifyButton/> */}
             <UserProfile/>
