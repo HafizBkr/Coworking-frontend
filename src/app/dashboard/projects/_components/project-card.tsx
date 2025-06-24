@@ -17,10 +17,12 @@ import { duplicateProject } from '../_services/project.service';
 import { toast } from 'sonner';
 import { redirect } from 'next/navigation';
 import { routes } from '@/config/routes';
+import { useProjectStore } from '@/stores/project.store';
 
 export default function ProjectCard(project:Project) {
-const avatar = createAvatar(glass);
-const svg = avatar.toDataUri()
+  const avatar = createAvatar(glass);
+  const svg = avatar.toDataUri();
+  const { setCurrentProject } = useProjectStore();
   return (
     <div className='w-full hover:scale-105 transition-all ease-in-out duration-300 group  p-4 bg-background border shadow rounded-xl relative'>
         <div className='flex gap-2'>
@@ -31,7 +33,10 @@ const svg = avatar.toDataUri()
                 fill
                 />
             </div>
-            <Link prefetch href={routes.dashboard.projects+`/${project._id}`} className='max-w-md hover:underline w-full'>
+            <Link 
+            onClick={()=>setCurrentProject(project)}
+            prefetch 
+            href={routes.dashboard.projects+`/${project._id}`} className='max-w-md hover:underline w-full'>
                 <h1 className='text-lg font-semibold'>{project.name}</h1>
                 <p className='text-muted-foreground text-sm line-clamp-2'>{project.description}</p>
             </Link>

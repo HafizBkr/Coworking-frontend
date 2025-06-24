@@ -7,12 +7,13 @@ export default async function Page({
   }: {
     params: Promise<{ projectId: string }>
   }) {
-    const { projectId } = await params
+    const { projectId } = await params;
+    console.log({ projectId });
+    
     return (
-        <section  className='min-h-[calc(100svh-4rem)] overflow-y-auto p-8 space-y-4  w-full'>
+        <section  className='min-h-[calc(100svh-4rem)] overflow-y-auto p-8 space-y-8  w-full'>
             <NavBarProject/>
             <KanbanDashboard/>
-            {projectId}
         </section>
     )
   }
