@@ -34,7 +34,7 @@ export function OTPForm() {
   async function handleVerifiactionOTP(formData:FormData){
     startTransition(async () =>{
       const response = await verifcationOTP(formData);
-      console.log({ errors: response.errors, error: response.error})
+      console.log({ response, errors: response.errors, error: response.error})
       // console.log(response)
       if(!response.success && !response.errors ){
         toast.error(response.message)
@@ -96,11 +96,11 @@ export function OTPForm() {
         )}
       />
       <FieldError message={errors.code?.[0]}/>
-      <Input type='hidden' name='email' value={email||""}/>
+      <Input type='hidden' name='email' value={email||"tchandikouujashalom@gmail.com"}/>
       <Button type='submit' loading={isPending} className='w-full'>Continuer</Button>
     </form>
     <form action={handleResendOTP}>
-      <Input type='hidden' name='email' value={email||""}/>
+      <Input type='hidden' name='email' value={"tchandikouujashalom@gmail.com"}/>
       <Button loading={isPendingCode} variant={"outline"} className='w-full'>Renvoyer le code</Button>  
     </form>
   </div>

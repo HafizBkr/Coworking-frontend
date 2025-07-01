@@ -1,7 +1,7 @@
 "use server";
 import { routes } from "@/config/routes";
 import api from "@/interceptors/axios.interceptor";
-import { workspaceSchema } from "@/schemas/workspace.shema";
+import { inviteWorkspaceSchema, workspaceSchema } from "@/schemas/workspace.shema";
 import { APIResponse } from "@/services/types/definition.type";
 import { revalidatePath } from "next/cache";
 
@@ -25,7 +25,7 @@ export async function getWorkspaces():Promise<APIResponse>{
 }
 
 export async function getActiveUsersWorkspaces(workspaceId: string):Promise<APIResponse>{
-    const res = await api.get(endpoint+`/${workspaceId}/active-users`);
+    const res = await api.get(endpoint+`/${workspaceId}/members`);
 
     console.log({log:res.data})
     if(res?.data?.error){
@@ -41,7 +41,6 @@ export async function getActiveUsersWorkspaces(workspaceId: string):Promise<APIR
         data: res.data.data
     }
 }
-
 
 export async function createWorkspace(formData:FormData):Promise<APIResponse>{
     const name = formData.get("name");
@@ -81,3 +80,39 @@ export async function createWorkspace(formData:FormData):Promise<APIResponse>{
     }
 }
 
+export async function inviteUserWorkspace(emails:string[],workspaceId:string) {
+    // const logo = "test";
+
+    const data = {
+        emails,
+        role: "member"
+    }
+
+    const validatedData = inviteWorkspaceSchema.safeParse(data);
+
+    if(!validatedData.success){
+        return{
+            success:false,
+            message:"Champs invalides",
+            errors: validatedData.error.flatten().fieldErrors
+        }
+    }
+
+    const res = await api.post(`/invitations/workspaces/${workspaceId}/invitations`,data);
+
+    console.log({log:res.data})
+
+    if(res?.data?.error){
+        return {
+            success: false,
+            message: res?.data.error||"Une erreur s'est produite de l'invitation du membre",
+        }
+    }
+
+    revalidatePath(routes.dashboard.home);
+    return {
+        success: true,
+        message: "Invitation envoyée avec succes !",
+        data: res.data
+    }
+}

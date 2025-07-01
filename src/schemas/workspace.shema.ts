@@ -22,3 +22,8 @@ export const workspaceSchema = z.object({
         })
         .optional()
 });
+
+export const inviteWorkspaceSchema = z.object({
+    emails: z.array(z.string()),
+    role: z.string()
+})

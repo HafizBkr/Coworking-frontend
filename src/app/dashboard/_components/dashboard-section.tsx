@@ -6,6 +6,11 @@ import { cn } from '@/lib/utils';
 import { AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useActiveUsersWorkspaces } from '../_hooks/use-workspaces-members-active';
+import { User } from '@/models/user.model';
+import { createAvatar } from '@dicebear/core';
+import { glass } from '@dicebear/collection';
+import { Loader } from '@/components/customs/loader';
+
 
 
 
@@ -128,26 +133,41 @@ function UrgentTaskCardItem(){
 }
 
 
-function VirtualSpaceCardItem(){
-  
+function VirtualSpaceCardItem({member}:{member: User}){
+  const avatar = createAvatar(glass,{
+    seed: member.email
+  });
+  const svg = avatar.toDataUri()
   return (
     <div className='flex justify-between'>
       <div className='flex gap-2'>
-        <div className='size-14 shrink-0 rounded-full bg-primary'/>
+        <div className='size-14 relative overflow-hidden shrink-0 rounded-full bg-primary'>
+          <Image src={svg} alt={member.username} fill className='rounded-full'/>
+        </div>
         <div>
-          <h1 className='text-xl font-semibold'>John doe</h1>
-          <p className='text-muted-foreground'>Developpeur frontend</p>
+          <h1 className='text-xl font-semibold'>{member.email}</h1>
+          <p className='text-muted-foreground'>{member.email}</p>
         </div>
       </div>
       <div>
-        <Badge variant={"secondary"} className='rounded-full'>Disponible</Badge>
+        <Badge variant={"secondary"} className={cn('rounded-full',member.role === "owner" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")}>{member.role}</Badge>
       </div>
     </div>
   );
 }
 
 function VirtualSpaceCard(){
-  const { membersActive } = useActiveUsersWorkspaces()
+  const { membersActive,isLoading } = useActiveUsersWorkspaces();
+
+  
+  if(isLoading){
+    return (
+      <div className='w-full rounded-xl h-full bg-background shadow-lg  flex flex-col justify-center items-center'>
+        <Loader/>
+      </div>
+    )
+  }
+
   return (
     <div className='rounded-xl h-full bg-background shadow-lg'>
       <div className='flex p-4 justify-between h-16 overflow-hidden items-enter'>
@@ -168,11 +188,12 @@ function VirtualSpaceCard(){
       <div className="pointer-events-none z-10 absolute inset-x-0 top-0 h-[6%] bg-gradient-to-b from-background"></div>
         <ScrollArea className='h-72 '>
           <div className='space-y-4 m-4'>
-            {membersActive?.map((_,index)=>(
-              <VirtualSpaceCardItem key={index}/>
+            {membersActive?.map((member,index)=>(
+              <VirtualSpaceCardItem key={index} member={member}/>
             ))}
           </div>
         </ScrollArea>
+        
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[10%] bg-gradient-to-t from-background"></div>
       </div>
     </div>

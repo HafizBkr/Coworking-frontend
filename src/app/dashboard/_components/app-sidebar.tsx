@@ -60,7 +60,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {
         title: "Messagerie",
         icon: MailboxIcon,
-        url: "#",
+        url: routes.dashboard.chat,
+        isActive: pathname === routes.dashboard.chat,
         isHide: !currentWorkspace
       },
       {
@@ -74,7 +75,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Parametres",
         icon: SettingsIcon,
         url: routes.dashboard.meet,
-        isActive: pathname === routes.dashboard.meet,
+        isActive: pathname === routes.dashboard.settings,
         isHide: !currentWorkspace
       }
     ]

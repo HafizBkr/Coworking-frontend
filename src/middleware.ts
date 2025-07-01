@@ -6,13 +6,16 @@ import { routes } from "./config/routes";
 // specifier les routes public et privee !
 const protectedRoutes = [
   routes.dashboard.home,
-  routes.dashboard.calendar
+  routes.dashboard.calendar,
+  routes.dashboard.chat,
+  routes.dashboard.meet,
+  routes.dashboard.projects,
+  routes.dashboard.settings
 ];
 
 const publicRoutes = [
     routes.auth.signin,
     routes.auth.signup,
-    routes.auth.otp,
 ];
 
 export default async function middleware(req: NextRequest) {
@@ -22,7 +25,7 @@ export default async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.includes(path);
   const isLoggedIn = session?.isAuthenticated ?? false;
 
-  console.log({ session, user: session.data })
+  // console.log({ session, user: session.data })
 
   if (shouldRedirectToLogin(isLoggedIn, isProtectedRoute)) {
     return NextResponse.redirect(new URL(routes.auth.signin, req.nextUrl));

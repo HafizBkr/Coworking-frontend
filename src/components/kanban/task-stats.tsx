@@ -13,25 +13,25 @@ export function TaskStats({ tasks, getTasksByStatus }: TaskStatsProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-2xl font-bold text-blue-600">{getTasksByStatus("todo").length}</div>
-          <div className="text-sm text-gray-600">Tâches à faire</div>
+          <div className="text-muted-foreground">Tâches à faire</div>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4">
-          <div className="text-2xl font-bold text-yellow-600">{getTasksByStatus("in-progress").length}</div>
-          <div className="text-sm text-gray-600">En cours</div>
+          <div className="text-2xl font-bold text-yellow-600">{getTasksByStatus("in_progress").length}</div>
+          <div className="text-muted-foreground">En cours</div>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4">
           <div className="text-2xl font-bold text-green-600">{getTasksByStatus("done").length}</div>
-          <div className="text-sm text-gray-600">Terminées</div>
+          <div className="text-muted-foreground">Terminées</div>
         </CardContent>
       </Card>
       <Card>
-        <CardContent className="p-4">
-          <div className="text-2xl font-bold text-gray-600">{tasks.length}</div>
-          <div className="text-sm text-gray-600">Total</div>
+        <CardContent className="p-2">
+          <div className="text-2xl font-bold text-violet-600">{tasks?.length || 0}</div>
+          <div className="text-muted-foreground">Total</div>
         </CardContent>
       </Card>
     </div>

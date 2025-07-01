@@ -1,10 +1,14 @@
 export const routes = {
     home:"/",
+    invite:"/invite",
+    invite_register: "/invite-register",
     dashboard:{
         home: "/dashboard",
         calendar: "/dashboard/calendar",
         projects: "/dashboard/projects",
-        meet: "/dashboard/meet"
+        meet: "/dashboard/meet",
+        settings: "/dashboard/settings",
+        chat: "/dashboard/chat"
     },
     auth:{
         signin:"/signin",

@@ -1,8 +1,8 @@
 export type Priority = "low" | "medium" | "high"
-export type Status = "todo" | "in-progress" | "done"
+export type Status = "todo" | "in_progress" | "done"
 
 export interface Task {
-  id: string
+  _id: string
   title: string
   description: string
   priority: Priority
@@ -28,5 +28,6 @@ export interface NewTaskForm {
   priority: Priority
   assignee: string
   dueDate: string
-  tags: string
+  tags: string,
+  status: Status
 }

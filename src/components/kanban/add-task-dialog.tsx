@@ -8,11 +8,17 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { NewTaskForm, Priority } from "@/types/kanban"
+import type { NewTaskForm, Priority, Status } from "@/types/kanban"
 
 interface AddTaskDialogProps {
-  onAddTask: (task: NewTaskForm) => boolean
+  onAddTask: (task: NewTaskForm) => Promise<boolean>
 }
+
+const STATUS_OPTIONS: { value: Status; label: string }[] = [
+  { value: "todo", label: "À faire" },
+  { value: "in_progress", label: "En cours" },
+  { value: "done", label: "Terminée" },
+]
 
 export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -23,10 +29,14 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
     assignee: "",
     dueDate: "",
     tags: "",
+    status: "todo" as Status,
   })
+  const [loading, setLoading] = useState(false)
 
-  const handleAddTask = () => {
-    const success = onAddTask(newTask)
+  const handleAddTask = async () => {
+    setLoading(true)
+    const success = await onAddTask(newTask)
+    setLoading(false)
     if (success) {
       setNewTask({
         title: "",
@@ -35,6 +45,7 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
         assignee: "",
         dueDate: "",
         tags: "",
+        status: "todo",
       })
       setIsOpen(false)
     }
@@ -48,7 +59,7 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
           Nouvelle tâche
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Créer une nouvelle tâche</DialogTitle>
         </DialogHeader>
@@ -88,13 +99,20 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
             </Select>
           </div>
           <div>
-            <Label htmlFor="assignee">Assigné à</Label>
-            <Input
-              id="assignee"
-              value={newTask.assignee}
-              onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-              placeholder="Nom de la personne"
-            />
+            <Label htmlFor="status">Statut</Label>
+            <Select
+              value={newTask.status}
+              onValueChange={(value: Status) => setNewTask({ ...newTask, status: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="dueDate">Date d&apos;échéance</Label>
@@ -105,17 +123,8 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
               onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
             />
           </div>
-          <div>
-            <Label htmlFor="tags">Tags (séparés par des virgules)</Label>
-            <Input
-              id="tags"
-              value={newTask.tags}
-              onChange={(e) => setNewTask({ ...newTask, tags: e.target.value })}
-              placeholder="Design, Frontend, Backend"
-            />
-          </div>
-          <Button onClick={handleAddTask} className="w-full">
-            Créer la tâche
+          <Button onClick={handleAddTask} className="w-full" disabled={loading}>
+            {loading ? "Création..." : "Créer la tâche"}
           </Button>
         </div>
       </DialogContent>

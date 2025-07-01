@@ -11,9 +11,10 @@ interface KanbanColumnProps {
   tasks: Task[]
   onMoveTask: (taskId: string, newStatus: Status) => void
   onDeleteTask: (taskId: string) => void
+  onAssignTask: (taskId: string, assignee: string) => void
 }
 
-export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, onAssignTask }: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -31,18 +32,19 @@ export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask }: Kanban
     e.preventDefault()
     setIsDragOver(false)
 
-    const taskId = e.dataTransfer.getData("text/plain")
+    const taskId = e.dataTransfer.getData("text/plain");
+    console.log({taskId: taskId, column: column.id})
     if (taskId) {
       onMoveTask(taskId, column.id)
     }
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border">
+    <div className="dark:bg-secondary rounded-lg shadow-sm dark:shadow-none border">
       <div className={`p-4 rounded-t-lg ${column.color}`}>
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-800">{column.title}</h3>
-          <Badge variant="secondary" className="bg-white/80">
+          <Badge variant="secondary" >
             {tasks.length}
           </Badge>
         </div>
@@ -50,22 +52,23 @@ export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask }: Kanban
 
       <div
         className={`p-4 space-y-3 min-h-[500px] transition-colors duration-200 ${
-          isDragOver ? "bg-blue-50 border-2 border-dashed border-blue-300" : ""
+          isDragOver ? "dark:bg-secondary border-2 border-dashed border-blue-500" : ""
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
             {isDragOver ? "Déposez la tâche ici" : "Aucune tâche"}
           </div>
         )}
 
         {tasks.map((task) => (
           <TaskCard
-            key={task.id}
+            key={task._id}
             task={task}
+            onAssignTask={onAssignTask}
             onMoveTask={onMoveTask}
             onDeleteTask={onDeleteTask}
             currentStatus={column.id}

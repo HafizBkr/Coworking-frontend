@@ -5,15 +5,12 @@ import {  CalendarMinus2Icon, EllipsisIcon, Share2Icon, Star, UserCheck } from '
 // import { Input } from '@/components/ui/input'
 // import { useState } from 'react'
 // import { Project } from '@/models/project.model'
-import { useKanban } from '@/hooks/use-kanban'
-import { AddTaskDialog } from '@/components/kanban/add-task-dialog'
 import { useProjectStore } from '@/stores/project.store'
 import { format } from 'date-fns'
 // import { ProjectDialog } from './project-dialog'
 
 export function NavBarProject() {
     // const [open, setOpen] = useState(false);
-    const { addTask } = useKanban()
     const { currentProject } = useProjectStore();
     return (
       <div className='space-y-8'>
@@ -22,7 +19,7 @@ export function NavBarProject() {
               <h1 className='text-4xl font-bold'>{ currentProject?.name }</h1>
             </div>
             <div className='flex gap-2'>
-                <AddTaskDialog onAddTask={addTask} />
+                
                 <Button size={'icon'} variant={'outline'}>
                     <Star/>
                 </Button>
@@ -37,13 +34,13 @@ export function NavBarProject() {
         <div className='space-y-4'>
             <div className=''>
                 <div className='flex gap-2 items-end'>
-                    <UserCheck className='text-muted-foreground'/>
+                    <UserCheck strokeWidth={1.5} className='text-muted-foreground'/>
                     <span className='text-muted-foreground font-semibold'>Assigné a</span>
                 </div>
             </div>
             <div className=''>
                 <div className='flex gap-2 items-end'>
-                    <CalendarMinus2Icon className='text-muted-foreground'/>
+                    <CalendarMinus2Icon strokeWidth={1.5} className='text-muted-foreground'/>
                     <span className='text-muted-foreground font-semibold'>Date limite : {currentProject?.endDate ? format(new Date(currentProject.endDate), "dd/MM/yyyy") : null}</span>
                 </div>
             </div>

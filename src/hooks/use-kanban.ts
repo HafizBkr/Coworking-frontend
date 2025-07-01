@@ -1,64 +1,126 @@
 "use client"
 
-import { useState } from "react"
-import type { Task, Status, NewTaskForm } from "../types/kanban"
-import { initialTasks } from "../data/initial-tasks"
+import { useState, useEffect, useOptimistic } from "react"
+import { createTask, getAllTasks, updateTask } from "@/app/dashboard/projects/[projectId]/_services/task.service"
+import type { Task, Status } from "../types/kanban"
+import { useProjectStore } from "@/stores/project.store"
+import { useWorkspaceStore } from "@/stores/workspace.store"
 
 export function useKanban() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [tasks, setTasks] = useState<Task[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null);
+  const { currentProject } = useProjectStore();
+  const { currentWorkspace } = useWorkspaceStore();
+  const projectId = currentProject?._id || "";
+  const workspaceId = currentWorkspace?._id || "";
 
-  const filteredTasks = tasks.filter(
+  // Optimistic state pour les tâches
+  const [optimisticTasks, setOptimisticTasks] = useOptimistic<Task[]>(tasks)
+
+  // Charger les tâches depuis l'API
+  useEffect(() => {
+    const fetchTasks = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await getAllTasks(projectId)
+        console.log({res: res})
+        if (res.success) {
+          setTasks(res.data as Task[])
+          setOptimisticTasks(res.data as Task[])
+        } else {
+          setError(res.message ?? "Erreur inconnue")
+        }
+      } catch {
+        setError("Erreur lors du chargement des tâches.")
+      }
+      setLoading(false)
+    }
+    if (projectId) fetchTasks()
+  }, [projectId])
+
+  const filteredTasks = optimisticTasks.filter(
     (task) =>
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
+      (task.tags && task.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())))
   )
 
   const getTasksByStatus = (status: Status) => {
     return filteredTasks.filter((task) => task.status === status)
   }
 
-  const addTask = (newTaskData: NewTaskForm) => {
-    if (newTaskData.title.trim()) {
-      const task: Task = {
-        id: Date.now().toString(),
-        title: newTaskData.title,
-        description: newTaskData.description,
-        priority: newTaskData.priority,
-        assignee: {
-          name: newTaskData.assignee || "Non assigné",
-          avatar: "/placeholder.svg?height=32&width=32",
-          initials:
-            newTaskData.assignee
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase() || "NA",
-        },
-        dueDate: newTaskData.dueDate,
-        status: "todo",
-        tags: newTaskData.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
+  // Ajout d'une tâche via l'API
+  const addTask = async (formData: FormData) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await createTask(formData, projectId, workspaceId)
+      console.log({res: res})
+      if (res.success) {
+        setTasks((prev) => [...prev, res.data as Task])
+        setOptimisticTasks((prev) => [...prev, res.data as Task])
+        setLoading(false)
+        return true
+      } else {
+        setError(res.message ?? "Erreur inconnue")
       }
-      setTasks([...tasks, task])
-      return true
+    } catch {
+      setError("Erreur lors de l'ajout de la tâche.")
     }
+    setLoading(false)
     return false
   }
 
-  const moveTask = (taskId: string, newStatus: Status) => {
-    setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)))
+  // Déplacement de tâche avec update optimiste
+  const moveTask = async (taskId: string, newStatus: Status) => {
+    // Optimistic update
+    setOptimisticTasks((prev) => prev.map((task) => (task._id === taskId ? { ...task, status: newStatus } : task)))
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await updateTask(newStatus, taskId)
+      console.log({res: res})
+      if (res.success) {
+        setTasks((prev) => prev.map((task) => (task._id === taskId ? { ...task, status: newStatus } : task)))
+        setLoading(false)
+        return true
+      } else {
+        setError(res.message ?? "Erreur inconnue")
+        // Rollback si erreur
+        setOptimisticTasks(tasks)
+      }
+    } catch {
+      setError("Erreur lors du déplacement de la tâche.")
+      // Rollback si erreur
+      setOptimisticTasks(tasks)
+    }
+    setLoading(false)
   }
 
   const deleteTask = (taskId: string) => {
-    setTasks(tasks.filter((task) => task.id !== taskId))
+    setTasks(tasks.filter((task) => task._id !== taskId))
+    setOptimisticTasks(optimisticTasks.filter((task) => task._id !== taskId))
   }
 
+  const assignTask = (taskId: string, assigneeName: string) => {
+    setTasks(tasks.map((task) =>
+      task._id === taskId
+        ? { ...task, assignee: { ...task.assignee, name: assigneeName } }
+        : task
+    ));
+    setOptimisticTasks(optimisticTasks.map((task) =>
+      task._id === taskId
+        ? { ...task, assignee: { ...task.assignee, name: assigneeName } }
+        : task
+    ));
+  };
+
+
   return {
-    tasks,
+    tasks: optimisticTasks,
     filteredTasks,
     searchTerm,
     setSearchTerm,
@@ -66,5 +128,9 @@ export function useKanban() {
     addTask,
     moveTask,
     deleteTask,
+    assignTask,
+    loading,
+    error,
+
   }
 }
