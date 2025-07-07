@@ -25,7 +25,7 @@ export default async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.includes(path);
   const isLoggedIn = session?.isAuthenticated ?? false;
 
-  // console.log({ session, user: session.data })
+  // console.log({ session, user: session.data, token: session.token })
 
   if (shouldRedirectToLogin(isLoggedIn, isProtectedRoute)) {
     return NextResponse.redirect(new URL(routes.auth.signin, req.nextUrl));
