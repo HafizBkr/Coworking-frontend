@@ -11,7 +11,7 @@ export function useActiveUsersWorkspaces() {
     const { currentWorkspace } = useWorkspaceStore()
 
     useEffect(()=>{
-        if(currentWorkspace){
+        if(currentWorkspace?._id){
             getActiveUsersWorkspaces(currentWorkspace._id)
             .then((data)=>{
                 setMembersActive(data.data as User[]);
@@ -19,7 +19,7 @@ export function useActiveUsersWorkspaces() {
             })
             .finally(()=>setIsLoading(false))
         }
-    },[]);
+    },[currentWorkspace?._id]);
 
     return {
         membersActive,

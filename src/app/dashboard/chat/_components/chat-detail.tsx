@@ -3,17 +3,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { glass } from '@dicebear/collection';
 import { createAvatar } from '@dicebear/core';
-import { SendIcon, XIcon, WifiIcon, WifiOffIcon } from 'lucide-react';
+import { SendIcon, XIcon, WifiIcon, WifiOffIcon, RefreshCwIcon } from 'lucide-react';
 import Image from 'next/image'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useChat, type ChatMessage } from '../_hooks/use-chat';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useChatIdStore } from '@/stores/chat-id.store';
 
 export function ChatDetailComponent() {
-  const { messages, isConnected, isLoading, error, sendMessage, messagesEndRef } = useChat();
+  const { chatId } = useChatIdStore();
+  const { 
+    messages, 
+    isConnected, 
+    isLoading, 
+    error, 
+    sendMessage, 
+    messagesEndRef, 
+    currentUser,
+    checkAndReconnect 
+  } = useChat();
   const [messageInput, setMessageInput] = useState('');
+  const [reconnecting, setReconnecting] = useState(false);
 
+  // Effacer le message d'entrée lors du changement de chat
+  useEffect(() => {
+    setMessageInput('');
+  }, [chatId]);
+  
   const handleSendMessage = () => {
     if (messageInput.trim()) {
       sendMessage(messageInput);
@@ -21,9 +38,13 @@ export function ChatDetailComponent() {
     }
   };
 
-  const handleTestMessage = () => {
-    console.log('🧪 [Test] Envoi d\'un message de test');
-    sendMessage('Message de test - ' + new Date().toLocaleTimeString());
+  const handleReconnect = async () => {
+    setReconnecting(true);
+    try {
+      await checkAndReconnect();
+    } finally {
+      setTimeout(() => setReconnecting(false), 500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -33,14 +54,26 @@ export function ChatDetailComponent() {
     }
   };
 
+  // Si aucun chat n'est sélectionné, afficher le composant placeholder
+  if (!chatId) {
+    return <ChatPlaceholder />;
+  }
+
   return (
     <div className='col-span-2 bg-white rounded-lg p-2 h-full flex flex-col'>
-        <ChatHeader isConnected={isConnected} onTestMessage={handleTestMessage} />
+        <ChatHeader 
+          isConnected={isConnected}
+          onReconnect={handleReconnect}
+          reconnecting={reconnecting}
+        />
         <ChatContent 
           messages={messages} 
           isLoading={isLoading} 
           error={error}
           messagesEndRef={messagesEndRef}
+          currentUser={currentUser}
+          onReconnect={handleReconnect}
+          reconnecting={reconnecting}
         />
         <ChatFooter 
           messageInput={messageInput}
@@ -48,6 +81,7 @@ export function ChatDetailComponent() {
           onSendMessage={handleSendMessage}
           onKeyPress={handleKeyPress}
           isConnected={isConnected}
+          disabled={isLoading || reconnecting}
         />
     </div>
   )
@@ -64,10 +98,11 @@ export function ChatPlaceholder() {
 
 interface ChatHeaderProps {
   isConnected: boolean;
-  onTestMessage?: () => void;
+  onReconnect: () => void;
+  reconnecting: boolean;
 }
 
-export function ChatHeader({ isConnected, onTestMessage }: ChatHeaderProps) {
+export function ChatHeader({ isConnected, onReconnect, reconnecting }: ChatHeaderProps) {
     const avatar = createAvatar(glass);
     const svg = avatar.toDataUri()
     return (
@@ -86,21 +121,21 @@ export function ChatHeader({ isConnected, onTestMessage }: ChatHeaderProps) {
                       <>
                         <WifiOffIcon className='w-3 h-3 text-red-500' />
                         <span className='text-xs text-red-600'>Déconnecté</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className='h-5 w-5 rounded-full ml-1' 
+                          onClick={onReconnect}
+                          disabled={reconnecting}
+                        >
+                          <RefreshCwIcon className={`h-3 w-3 ${reconnecting ? 'animate-spin' : ''}`} />
+                        </Button>
                       </>
                     )}
                   </div>
                 </div>
             </div>
             <div className='flex items-center gap-2'>
-                {onTestMessage && (
-                  <Button 
-                    size={"sm"}
-                    className='text-xs'
-                    variant={'outline'}
-                    onClick={onTestMessage}>
-                    Test
-                  </Button>
-                )}
                 <Button 
                 size={"icon"}
                 className='rounded-full'
@@ -117,9 +152,20 @@ interface ChatContentProps {
   isLoading: boolean;
   error: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  currentUser?: { id: string; username: string; email: string } | null;
+  onReconnect: () => void;
+  reconnecting: boolean;
 }
 
-export function ChatContent({ messages, isLoading, error, messagesEndRef }: ChatContentProps) {
+export function ChatContent({ 
+  messages, 
+  isLoading, 
+  error, 
+  messagesEndRef, 
+  currentUser,
+  onReconnect,
+  reconnecting
+}: ChatContentProps) {
     if (isLoading) {
       return (
         <div className='flex flex-col p-4 h-full items-center justify-center'>
@@ -131,8 +177,18 @@ export function ChatContent({ messages, isLoading, error, messagesEndRef }: Chat
 
     if (error) {
       return (
-        <div className='flex flex-col p-4 h-full items-center justify-center'>
+        <div className='flex flex-col p-4 h-full items-center justify-center gap-3'>
           <p className='text-sm text-red-500 text-center'>{error}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onReconnect}
+            disabled={reconnecting}
+            className='flex items-center gap-1'
+          >
+            <RefreshCwIcon className={`h-3 w-3 ${reconnecting ? 'animate-spin' : ''}`} />
+            {reconnecting ? 'Reconnexion...' : 'Réessayer'}
+          </Button>
         </div>
       );
     }
@@ -147,7 +203,7 @@ export function ChatContent({ messages, isLoading, error, messagesEndRef }: Chat
               </div>
             ) : (
               messages.map((message) => (
-                <ChatMessage key={message._id} message={message} />
+                <ChatMessage key={message.tempId || message._id || message.createdAt} message={message} currentUser={currentUser} />
               ))
             )}
             <div ref={messagesEndRef} />
@@ -157,39 +213,56 @@ export function ChatContent({ messages, isLoading, error, messagesEndRef }: Chat
 
 interface ChatMessageProps {
   message: ChatMessage;
+  currentUser?: { id: string; username: string; email: string } | null;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, currentUser }: ChatMessageProps) {
     const avatar = createAvatar(glass, {
       seed: message.sender.username
     });
     const svg = avatar.toDataUri();
+    const isMine = currentUser && (message.sender._id === currentUser.id || message.sender.email === currentUser.email);
     
+    // Format de date à afficher
+    const messageDate = new Date(message.createdAt);
+    const formattedTime = format(messageDate, 'HH:mm', { locale: fr });
+
     return (
-        <div className='flex gap-3 mb-4'>
-            <div className='shrink-0 size-8 rounded-full overflow-hidden'>
-            <Image 
-              src={svg} 
-              alt={message.sender.username} 
-              width={32} 
-              height={32} 
-              className='rounded-full shrink-0' 
-            />
-            </div>
-            <div className='flex-1'>
-                <div className='flex items-center gap-2 mb-1'>
+        <div className={`flex gap-3 mb-4 ${isMine ? 'justify-end' : 'justify-start'}`}>
+            {!isMine && (
+              <div className='shrink-0 size-8 rounded-full overflow-hidden'>
+                <Image 
+                  src={svg} 
+                  alt={message.sender.username} 
+                  width={32} 
+                  height={32} 
+                  className='rounded-full shrink-0' 
+                />
+              </div>
+            )}
+            <div className={`flex-1 flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                <div className={`flex items-center gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
                     <span className='text-sm font-medium'>{message.sender.username}</span>
-                    <span className='text-xs text-muted-foreground'>
-                      {format(new Date(message.createdAt), 'HH:mm', { locale: fr })}
-                    </span>
+                    <span className='text-xs text-muted-foreground'>{formattedTime}</span>
                     {message.tempId && (
                       <span className='text-xs text-blue-500'>Envoi...</span>
                     )}
                 </div>
-                <div className='bg-gray-100 rounded-lg p-3 max-w-[80%]'>
-                    <p className='text-sm'>{message.content}</p>
+                <div className={`${isMine ? 'bg-primary text-white' : 'bg-gray-100'} rounded-lg p-3 max-w-[80%]`}>
+                    <p className='text-sm whitespace-pre-wrap break-words'>{message.content}</p>
                 </div>
             </div>
+            {isMine && (
+              <div className='shrink-0 size-8 rounded-full overflow-hidden'>
+                <Image 
+                  src={svg} 
+                  alt={message.sender.username} 
+                  width={32} 
+                  height={32} 
+                  className='rounded-full shrink-0' 
+                />
+              </div>
+            )}
         </div>
     )
 }
@@ -200,6 +273,7 @@ interface ChatFooterProps {
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
   isConnected: boolean;
+  disabled: boolean;
 }
 
 export function ChatFooter({ 
@@ -207,7 +281,8 @@ export function ChatFooter({
   setMessageInput, 
   onSendMessage, 
   onKeyPress, 
-  isConnected 
+  isConnected,
+  disabled 
 }: ChatFooterProps) {
     return (
         <div className='flex items-center p-4 border-t'>
@@ -217,6 +292,7 @@ export function ChatFooter({
               onKeyPress={onKeyPress}
               onSendMessage={onSendMessage}
               isConnected={isConnected}
+              disabled={disabled}
             />
         </div>
     )
@@ -228,6 +304,7 @@ interface ChatInputProps {
   onKeyPress: (e: React.KeyboardEvent) => void;
   onSendMessage: () => void;
   isConnected: boolean;
+  disabled: boolean;
 }
 
 export function ChatInput({ 
@@ -235,25 +312,27 @@ export function ChatInput({
   onChange, 
   onKeyPress, 
   onSendMessage, 
-  isConnected 
+  isConnected,
+  disabled 
 }: ChatInputProps) {
     return (
         <div className='flex items-center gap-2 w-full'>
             <Input 
-              placeholder={isConnected ? 'Tapez votre message...' : 'Connexion...'} 
-              className='w-full'
-              value={value}
-              onChange={onChange}
-              onKeyPress={onKeyPress}
-              disabled={!isConnected}
+                type='text'
+                placeholder='Écrivez un message...' 
+                className='flex-1'
+                value={value}
+                onChange={onChange}
+                onKeyDown={onKeyPress}
+                disabled={disabled}
             />
             <Button 
-                className='rounded-full' 
-                variant={'outline'} 
-                size={'icon'}
+                size={'icon'} 
                 onClick={onSendMessage}
-                disabled={!isConnected || !value.trim()}>
-                <SendIcon/>
+                disabled={!value.trim() || !isConnected || disabled}
+                className={`${!value.trim() || !isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+                <SendIcon className='h-4 w-4' />
             </Button>
         </div>
     )

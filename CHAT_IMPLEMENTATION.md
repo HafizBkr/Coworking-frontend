@@ -1,168 +1,174 @@
-# Implémentation du Chat en Temps Réel avec Socket.IO
+# Documentation du système de chat
 
-## Vue d'ensemble
+## Architecture du chat temps réel
 
-Cette implémentation ajoute un système de chat en temps réel à votre application Next.js en utilisant Socket.IO client. Le système permet aux utilisateurs de communiquer en temps réel dans des espaces de travail.
+Le système de chat utilise une architecture client-serveur avec Socket.IO pour la communication en temps réel. Cette documentation explique les composants principaux et les améliorations apportées pour résoudre les problèmes de temps réel.
 
-## Architecture
+### Composants principaux
 
-### 1. Service Socket.IO (`src/services/socket/socket.service.ts`)
+1. **Socket Service** (`src/services/socket/socket.service.ts`)
+   - Service singleton qui gère la connexion Socket.IO
+   - Fournit des méthodes pour se connecter, rejoindre des salons et envoyer des messages
+   - Gère les écouteurs d'événements et les callbacks
 
-Le service principal qui gère :
-- Connexion/déconnexion au serveur Socket.IO
-- Authentification avec JWT
-- Gestion des événements (nouveaux messages, confirmation d'envoi, etc.)
-- Reconnexion automatique
+2. **Hook useChat** (`src/app/dashboard/chat/_hooks/use-chat.ts`)
+   - Hook React qui expose l'API du chat aux composants
+   - Gère les messages, l'état de connexion et les erreurs
+   - Implémente l'UI optimiste pour une expérience fluide
 
-### 2. Hook personnalisé (`src/app/dashboard/chat/_hooks/use-chat.ts`)
+3. **Hook useChatGeneral** (`src/app/dashboard/chat/_hooks/use-chat-general.ts`)
+   - Gère la récupération du chat général du workspace courant
+   - Fournit l'ID du chat à utiliser par défaut
 
-Hook React qui :
-- Gère l'état du chat (messages, connexion, erreurs)
-- Charge les messages existants depuis l'API
-- Gère l'envoi de messages avec feedback temporaire
-- Scroll automatique vers le bas
+4. **Composants d'UI** (`src/app/dashboard/chat/_components/chat-detail.tsx`)
+   - Composants React pour afficher les messages, l'état de connexion, etc.
+   - Gèrent les interactions utilisateur comme l'envoi de messages
 
-### 3. Composants UI
+### Améliorations apportées
 
-- **ChatDetailComponent** : Interface principale du chat
-- **ChatComponent** : Liste des conversations
-- **ConnectionStatus** : Indicateur de statut de connexion
+#### 1. Gestion robuste des connexions
 
-## Configuration
+**Problème :** Perte de connexion fréquente et absence de reconnexion automatique.
 
-### Variables d'environnement
+**Solution :**
+- Mécanisme de reconnexion automatique avec backoff exponentiel
+- Stockage des handlers d'événements pour restauration après reconnexion
+- Détection de déconnexion et tentative de reconnexion automatique
+- Vérification périodique de l'état de connexion
 
-Ajoutez dans votre `.env.local` :
-
-```env
-NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
-```
-
-### Configuration Socket.IO
-
-Le fichier `src/config/socket.config.ts` contient :
-- URL du serveur Socket.IO
-- Timeout de connexion
-- Paramètres de reconnexion
-
-## Fonctionnalités
-
-### ✅ Implémentées
-
-1. **Connexion en temps réel** : Connexion automatique au serveur Socket.IO
-2. **Authentification** : Utilisation du token JWT pour l'authentification
-3. **Envoi de messages** : Envoi de messages avec feedback temporaire
-4. **Réception de messages** : Réception en temps réel des nouveaux messages
-5. **Chargement des messages** : Chargement des messages existants depuis l'API
-6. **Indicateurs de statut** : Affichage du statut de connexion
-7. **Gestion d'erreurs** : Gestion des erreurs de connexion et d'envoi
-8. **Scroll automatique** : Scroll automatique vers le bas lors de nouveaux messages
-9. **Reconnexion automatique** : Reconnexion automatique en cas de déconnexion
-
-### 🔄 Événements Socket.IO
-
-- `join-workspace` : Rejoindre un espace de travail
-- `join-chat` : Rejoindre un chat spécifique
-- `send-message` : Envoyer un message
-- `new-message` : Recevoir un nouveau message
-- `message-sent` : Confirmation d'envoi de message
-- `chat-joined` : Confirmation de connexion au chat
-- `workspace-joined` : Confirmation de connexion au workspace
-
-## Utilisation
-
-### Dans un composant
-
-```tsx
-import { useChat } from '@/app/dashboard/chat/_hooks/use-chat';
-
-function MyChatComponent() {
-  const { 
-    messages, 
-    isConnected, 
-    sendMessage, 
-    isLoading, 
-    error 
-  } = useChat();
-
-  const handleSendMessage = (content: string) => {
-    sendMessage(content);
-  };
-
-  return (
-    <div>
-      {isConnected ? 'Connecté' : 'Déconnecté'}
-      {messages.map(message => (
-        <div key={message._id}>{message.content}</div>
-      ))}
-    </div>
-  );
+```typescript
+// Exemple de reconnexion automatique
+private scheduleReconnect(): void {
+  if (this.reconnectTimer) return;
+  
+  this.reconnectTimer = setTimeout(() => {
+    this.reconnectTimer = null;
+    this.connect().catch(err => {
+      console.error('❌ [Socket] Échec de la reconnexion automatique:', err);
+    });
+  }, 3000);
 }
 ```
 
-### Gestion des messages temporaires
+#### 2. UI optimiste pour les messages
 
-Le système utilise des IDs temporaires pour afficher immédiatement les messages envoyés :
+**Problème :** Latence perçue lors de l'envoi de messages.
 
-```tsx
-// Message temporaire affiché immédiatement
-const tempMessage = {
-  _id: `temp-${Date.now()}`,
-  content: "Mon message",
-  tempId: `temp-${Date.now()}`
-};
+**Solution :**
+- Affichage immédiat des messages envoyés avec un ID temporaire
+- Remplacement par les vrais messages une fois confirmés par le serveur
+- Indicateurs visuels pour les messages en cours d'envoi
 
-// Une fois confirmé par le serveur
-const confirmedMessage = {
-  _id: "real-message-id",
-  content: "Mon message",
-  tempId: undefined
-};
+```typescript
+// Exemple d'implémentation optimiste
+startTransition(() => {
+  addOptimisticMessage(tempMessage);
+});
+
+try {
+  await socketService.sendMessage(chatId, content, tempId);
+} catch (err) {
+  // Retirer le message optimiste en cas d'erreur
+  setMessages(prev => prev.filter(msg => msg._id !== tempId));
+}
 ```
 
-## Sécurité
+#### 3. Gestion intelligente des événements
 
-- Authentification JWT obligatoire
-- Validation des tokens côté serveur
-- Gestion des erreurs d'authentification
+**Problème :** Duplication d'événements et écouteurs multiples.
 
-## Performance
+**Solution :**
+- Enregistrement centralisé des handlers d'événements
+- Nettoyage systématique des écouteurs lors des changements de contexte
+- Filtrage des messages par chatId pour éviter les doublons
 
-- Reconnexion automatique avec délai progressif
-- Chargement des messages existants uniquement au besoin
-- Optimisation du scroll avec `useRef`
+```typescript
+// Gestion des écouteurs d'événements
+private registerEventHandler(event: string, callback: (data: any) => void): void {
+  if (!this.eventHandlers.has(event)) {
+    this.eventHandlers.set(event, []);
+  }
+  
+  const handlers = this.eventHandlers.get(event) || [];
+  if (!handlers.includes(callback)) {
+    handlers.push(callback);
+    this.eventHandlers.set(event, handlers);
+  }
+}
+```
 
-## Dépendances
+#### 4. Meilleure expérience utilisateur
 
-- `socket.io-client` : Client Socket.IO
-- `date-fns` : Formatage des dates
-- `@dicebear/collection` : Génération d'avatars
-- `zustand` : Gestion d'état (stores existants)
+**Problème :** Manque de retour visuel sur l'état du système.
 
-## Tests
+**Solution :**
+- Indicateurs clairs de l'état de connexion
+- Bouton de reconnexion manuelle
+- Messages d'erreur explicites avec possibilité de réessayer
+- Gestion des états de chargement
 
-Pour tester l'implémentation :
+```tsx
+// Exemple d'UI pour l'état de connexion
+{isConnected ? (
+  <>
+    <WifiIcon className='w-3 h-3 text-green-500' />
+    <span className='text-xs text-green-600'>Connecté</span>
+  </>
+) : (
+  <>
+    <WifiOffIcon className='w-3 h-3 text-red-500' />
+    <span className='text-xs text-red-600'>Déconnecté</span>
+    <Button onClick={onReconnect} disabled={reconnecting}>
+      <RefreshCwIcon className={reconnecting ? 'animate-spin' : ''} />
+    </Button>
+  </>
+)}
+```
 
-1. Démarrez votre serveur backend Socket.IO
-2. Assurez-vous que l'URL est correcte dans la configuration
-3. Connectez-vous à l'application
-4. Naviguez vers le chat
-5. Vérifiez que le statut de connexion s'affiche
-6. Envoyez et recevez des messages
+#### 5. Gestion des changements de salon de chat
 
-## Dépannage
+**Problème :** Messages mélangés entre différents salons de chat.
 
-### Problèmes courants
+**Solution :**
+- Suivi du salon de chat actif via une référence
+- Filtrage des messages par salon
+- Nettoyage et réinitialisation lors du changement de salon
 
-1. **Connexion échouée** : Vérifiez l'URL du serveur Socket.IO
-2. **Authentification échouée** : Vérifiez que le token JWT est valide
-3. **Messages non reçus** : Vérifiez les événements Socket.IO côté serveur
-4. **Erreurs de type** : Vérifiez les interfaces TypeScript
+```typescript
+// Vérification du changement de salon
+useEffect(() => {
+  if (chatId && chatRoomJoinedRef.current !== chatId && socketService.isConnected()) {
+    socketService.joinChat(chatId);
+    chatRoomJoinedRef.current = chatId;
+    loadMessages();
+  }
+}, [chatId]);
+```
 
-### Logs utiles
+## Utilisation du chat
 
-Le système affiche des logs dans la console :
-- `✅ Connecté au serveur Socket.IO`
-- `💬 Nouveau message reçu`
-- `📤 Message envoyé`
-- `❌ Erreur Socket.IO` 
+1. **Connexion automatique :**
+   - Le chat se connecte automatiquement quand un workspace et un chat sont sélectionnés
+   - La reconnexion est tentée automatiquement en cas de perte de connexion
+
+2. **Envoi de messages :**
+   - Les messages apparaissent immédiatement dans l'interface (UI optimiste)
+   - Un indicateur "Envoi..." s'affiche pendant la confirmation par le serveur
+
+3. **Gestion des erreurs :**
+   - Les erreurs sont clairement affichées avec possibilité de réessayer
+   - Les tentatives de reconnexion sont visibles pour l'utilisateur
+
+## Bonnes pratiques
+
+1. **Logging extensif :**
+   - Traçage détaillé des événements de connexion et de messages
+   - Format standardisé pour faciliter le débogage
+
+2. **Nettoyage systématique :**
+   - Désinscription des écouteurs lors du démontage des composants
+   - Nettoyage des timers et références
+
+3. **Gestion des erreurs :**
+   - Capture et affichage des erreurs à tous les niveaux
+   - Messages d'erreur explicites et actions de récupération 

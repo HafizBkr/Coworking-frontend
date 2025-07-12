@@ -1,19 +1,9 @@
-import { useEffect, useState, useCallback, useRef, useOptimistic, startTransition } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { socketService } from '@/services/socket/socket.service';
 import { useWorkspaceStore } from '@/stores/workspace.store';
 import { useChatIdStore } from '@/stores/chat-id.store';
 import { getSession } from '@/services/auth/session.service';
 import { getChatMessages } from '../_services/chat.service';
-
-export interface Message {
-  id: string;
-  chatId: string;
-  sender: string;
-  content: string;
-  attachments?: string[];
-  timestamp: string;
-  tempId?: string;
-}
 
 export interface ChatMessage {
   _id: string;
@@ -27,15 +17,10 @@ export interface ChatMessage {
   attachments?: string[];
   createdAt: string;
   updatedAt: string;
-  tempId?: string;
 }
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
-    messages,
-    (state, newMsg: ChatMessage) => [...state, newMsg]
-  );
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,25 +121,20 @@ export function useChat() {
 
         // Écouter les nouveaux messages
         socketService.onNewMessage((data) => {
+          console.log('[Socket] Nouveau message reçu', data);
           setMessages(prev => {
-            // Remplace le message optimiste par le vrai (même tempId ou même _id)
-            const filtered = prev.filter(
-              msg => !(msg.tempId && data.tempId && msg.tempId === data.tempId) && msg._id !== data._id
-            );
-            return [...filtered, data];
+            // Vérifier si le message n'existe pas déjà
+            const messageExists = prev.some(msg => msg._id === data._id);
+            if (!messageExists) {
+              return [...prev, data];
+            }
+            return prev;
           });
         });
 
         // Écouter la confirmation d'envoi de message
         socketService.onMessageSent((data) => {
-          setMessages(prev => {
-            const updatedMessages = prev.map(msg => 
-              msg.tempId === data.tempId 
-                ? { ...msg, _id: data._id, tempId: undefined }
-                : msg
-            );
-            return updatedMessages;
-          });
+          console.log('✅ [Chat] Message envoyé confirmé:', data);
         });
 
         // Écouter les événements de connexion
@@ -215,40 +195,15 @@ export function useChat() {
       return;
     }
 
-    const tempId = `temp-${Date.now()}`;
-    console.log('🆔 [Chat] ID temporaire généré:', tempId);
-    
-    // Ajouter le message temporairement (optimiste)
-    const tempMessage: ChatMessage = {
-      _id: tempId,
-      chatId,
-      sender: {
-        _id: currentUser?.id || '',
-        username: currentUser?.username || '',
-        email: currentUser?.email || ''
-      },
-      content: content.trim(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tempId
-    };
-
-    console.log('📝 [Chat] Ajout du message temporaire à l\'interface (optimiste)');
-    startTransition(() => {
-      addOptimisticMessage(tempMessage);
-    });
-
     try {
       console.log('🚀 [Chat] Envoi du message via Socket.IO...');
-      await socketService.sendMessage(chatId, content.trim(), tempId);
+      await socketService.sendMessage(chatId, content.trim());
       console.log('✅ [Chat] Message envoyé avec succès');
     } catch (err) {
       console.error('❌ [Chat] Erreur lors de l\'envoi du message:', err);
-      // Optionnel : retirer le message optimiste en cas d\'erreur
-      setMessages(prev => prev.filter(msg => msg._id !== tempId));
       setError('Erreur lors de l\'envoi du message');
     }
-  }, [chatId, isConnected, currentUser, addOptimisticMessage]);
+  }, [chatId, isConnected, currentUser]);
 
   // Scroll automatique vers le bas
   const scrollToBottom = useCallback(() => {
@@ -257,7 +212,7 @@ export function useChat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [optimisticMessages, scrollToBottom]);
+  }, [messages, scrollToBottom]);
 
   // Méthode pour vérifier et reconnecter si nécessaire
   const checkAndReconnect = useCallback(async () => {
@@ -324,7 +279,7 @@ export function useChat() {
   }, []);
 
   return {
-    messages: optimisticMessages,
+    messages,
     isConnected,
     isLoading,
     error,

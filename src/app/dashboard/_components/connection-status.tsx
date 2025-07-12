@@ -1,3 +1,4 @@
+/* eslint-disable react/react-in-jsx-scope */
 import { useChat } from '../chat/_hooks/use-chat';
 import { WifiIcon, WifiOffIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';

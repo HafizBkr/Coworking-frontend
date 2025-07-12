@@ -59,8 +59,8 @@ export function ForgotPasswordForm() {
             <FieldError message={errors.email?.[0]}/>
         </div>
         <div className='grid grid-cols-2 gap-4'>
-            <Button variant={'outline'} className='w-full'>Retour</Button>   
-            <Button loading={isPending} className='w-full'>Continuer</Button>   
+            <Button type='button' onClick={()=>redirect(routes.auth.signin)} variant={'outline'} className='w-full'>Retour</Button>   
+            <Button type='submit' loading={isPending} className='w-full'>Continuer</Button>   
         </div>   
     </form>
   </div>

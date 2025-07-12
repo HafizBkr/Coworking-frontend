@@ -21,6 +21,7 @@ import {
 import { useWorkspaces } from "../_hooks/use-workspaces";
 import { WorkspaceDialog } from "./workspace-dialog";
 import { useWorkspaceStore } from "@/stores/workspace.store";
+import { useChatIdStore } from "@/stores/chat-id.store";
 
 
 export function WorkSpaceSwitcher() {
@@ -28,6 +29,7 @@ export function WorkSpaceSwitcher() {
   const { setCurrentWorkspace, currentWorkspace } = useWorkspaceStore();
   const { workspaces }= useWorkspaces();
   const [openDialog, setOpenDialog] = React.useState(false);
+  const { clearChatId } = useChatIdStore()
 
   // if(!workspaces?.[0]){
   //   return null
@@ -72,7 +74,8 @@ export function WorkSpaceSwitcher() {
               <DropdownMenuItem
                 key={workspace.name}
                 onClick={() => {
-                  setCurrentWorkspace(workspace)
+                  setCurrentWorkspace(workspace);
+                  clearChatId()
                 }}
                 className="gap-2 p-2"
               >

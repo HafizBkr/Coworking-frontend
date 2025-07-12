@@ -7,6 +7,8 @@ class SocketService {
   private socket: Socket | null = null;
   private isConnecting = false;
   private connectionPromise: Promise<Socket | null> | null = null;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private eventHandlers: Map<string, ((data: any) => void)[]> = new Map();
 
   async connect(): Promise<Socket | null> {
     console.log('🔄 [Socket] Tentative de connexion...');
@@ -32,6 +34,11 @@ class SocketService {
 
   private async performConnection(): Promise<Socket | null> {
     try {
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      
       console.log('🔐 [Socket] Récupération de la session utilisateur...');
       const session = await getSession();
       
@@ -43,6 +50,7 @@ class SocketService {
           userId: session.data?.id
         });
         this.isConnecting = false;
+        this.connectionPromise = null;
         return null;
       }
 
@@ -51,6 +59,11 @@ class SocketService {
         username: session.data?.username,
         tokenLength: session.token?.length
       });
+
+      // Déconnecter l'ancien socket s'il existe
+      if (this.socket) {
+        this.socket.disconnect();
+      }
 
       this.socket = io(SOCKET_CONFIG.SERVER_URL, {
         auth: { 
@@ -61,6 +74,7 @@ class SocketService {
         reconnection: true,
         reconnectionAttempts: SOCKET_CONFIG.RECONNECTION_ATTEMPTS,
         reconnectionDelay: SOCKET_CONFIG.RECONNECTION_DELAY,
+        forceNew: true
       });
 
       this.socket.on('connect', () => {
@@ -77,6 +91,11 @@ class SocketService {
         
         // Réinitialiser la promesse de connexion pour permettre une nouvelle connexion
         this.connectionPromise = null;
+        
+        // Tentative de reconnexion automatique pour certaines raisons de déconnexion
+        if (reason === 'io server disconnect' || reason === 'transport close') {
+          this.scheduleReconnect();
+        }
       });
 
       this.socket.on('connect_error', (error) => {
@@ -86,12 +105,18 @@ class SocketService {
         });
         this.isConnecting = false;
         this.connectionPromise = null;
+        
+        // Tenter une reconnexion après un délai
+        this.scheduleReconnect();
       });
 
       this.socket.on('error', (error) => {
         console.error('❌ [Socket] Erreur Socket.IO:', error);
         this.isConnecting = false;
       });
+
+      // Restaurer les écouteurs d'événements précédents
+      this.restoreEventHandlers();
 
       console.log('✅ [Socket] Configuration Socket.IO terminée');
       
@@ -109,7 +134,50 @@ class SocketService {
       this.connectionPromise = null;
       this.isConnecting = false;
       
+      // Tenter une reconnexion après un délai
+      this.scheduleReconnect();
+      
       return null;
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer) {
+      return; // Éviter les reconnexions multiples
+    }
+    
+    console.log('⏱️ [Socket] Planification d\'une reconnexion dans 3 secondes...');
+    this.reconnectTimer = setTimeout(() => {
+      console.log('🔄 [Socket] Tentative de reconnexion automatique...');
+      this.reconnectTimer = null;
+      this.connect().catch(err => {
+        console.error('❌ [Socket] Échec de la reconnexion automatique:', err);
+      });
+    }, 3000);
+  }
+
+  private restoreEventHandlers(): void {
+    if (!this.socket) return;
+    
+    // Restaurer tous les écouteurs d'événements enregistrés
+    this.eventHandlers.forEach((callbacks, event) => {
+      callbacks.forEach(callback => {
+        console.log('🔄 [Socket] Restauration de l\'écouteur pour:', event);
+        this.socket?.on(event, callback);
+      });
+    });
+  }
+
+  private registerEventHandler(event: string, callback: (data: any) => void): void {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, []);
+    }
+    
+    // Éviter les doublons
+    const handlers = this.eventHandlers.get(event) || [];
+    if (!handlers.includes(callback)) {
+      handlers.push(callback);
+      this.eventHandlers.set(event, handlers);
     }
   }
 
@@ -120,6 +188,14 @@ class SocketService {
       this.socket = null;
       this.connectionPromise = null;
       this.isConnecting = false;
+      
+      // Ne pas effacer les écouteurs enregistrés pour permettre leur restauration
+      
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      
       console.log('✅ [Socket] Socket déconnecté et nettoyé');
     } else {
       console.log('ℹ️ [Socket] Aucun socket à déconnecter');
@@ -143,27 +219,42 @@ class SocketService {
 
   // Méthodes pour rejoindre les espaces de travail et chats
   async joinWorkspace(workspaceId: string): Promise<void> {
+    if (!this.socket?.connected) {
+      console.warn('⚠️ [Socket] Socket non connecté, tentative de reconnexion...');
+      await this.connect();
+    }
+    
     if (this.socket?.connected) {
       console.log('🔄 [Socket] Tentative de rejoindre le workspace:', workspaceId);
       this.socket.emit('join-workspace', workspaceId);
       console.log('📤 [Socket] Événement join-workspace émis');
     } else {
-      console.warn('⚠️ [Socket] Impossible de rejoindre le workspace: socket non connecté');
+      console.warn('⚠️ [Socket] Impossible de rejoindre le workspace: socket toujours non connecté');
     }
   }
 
   async joinChat(chatId: string): Promise<void> {
+    if (!this.socket?.connected) {
+      console.warn('⚠️ [Socket] Socket non connecté, tentative de reconnexion...');
+      await this.connect();
+    }
+    
     if (this.socket?.connected) {
       console.log('🔄 [Socket] Tentative de rejoindre le chat:', chatId);
       this.socket.emit('join-chat', chatId);
       console.log('📤 [Socket] Événement join-chat émis');
     } else {
-      console.warn('⚠️ [Socket] Impossible de rejoindre le chat: socket non connecté');
+      console.warn('⚠️ [Socket] Impossible de rejoindre le chat: socket toujours non connecté');
     }
   }
 
   // Méthode pour envoyer un message
   async sendMessage(chatId: string, content: string, tempId?: string): Promise<void> {
+    if (!this.socket?.connected) {
+      console.warn('⚠️ [Socket] Socket non connecté, tentative de reconnexion avant envoi...');
+      await this.connect();
+    }
+    
     if (this.socket?.connected) {
       console.log('📤 [Socket] Envoi du message:', { chatId, content, tempId });
       this.socket.emit('send-message', {
@@ -173,12 +264,15 @@ class SocketService {
       });
       console.log('📤 [Socket] Événement send-message émis');
     } else {
-      console.warn('⚠️ [Socket] Impossible d\'envoyer le message: socket non connecté');
+      console.warn('⚠️ [Socket] Impossible d\'envoyer le message: socket toujours non connecté');
+      throw new Error('Socket non connecté');
     }
   }
 
   // Écouteurs d'événements
   onNewMessage(callback: (data: any) => void): void {
+    this.registerEventHandler('new-message', callback);
+    
     this.socket?.on('new-message', (data) => {
       console.log('💬 [Socket] Nouveau message reçu:', data);
       console.log('📊 [Socket] Détails du message:', {
@@ -193,6 +287,8 @@ class SocketService {
   }
 
   onMessageSent(callback: (data: any) => void): void {
+    this.registerEventHandler('message-sent', callback);
+    
     this.socket?.on('message-sent', (data) => {
       console.log('📤 [Socket] Message envoyé avec succès:', data);
       console.log('📊 [Socket] Détails de confirmation:', {
@@ -205,6 +301,8 @@ class SocketService {
   }
 
   onChatJoined(callback: (data: any) => void): void {
+    this.registerEventHandler('chat-joined', callback);
+    
     this.socket?.on('chat-joined', (data) => {
       console.log('📥 [Socket] Chat rejoint avec succès:', data);
       console.log('📊 [Socket] Détails du chat:', {
@@ -216,6 +314,8 @@ class SocketService {
   }
 
   onWorkspaceJoined(callback: (data: any) => void): void {
+    this.registerEventHandler('workspace-joined', callback);
+    
     this.socket?.on('workspace-joined', (data) => {
       console.log('📥 [Socket] Workspace rejoint avec succès:', data);
       console.log('📊 [Socket] Détails du workspace:', {
@@ -227,6 +327,8 @@ class SocketService {
   }
 
   onError(callback: (error: any) => void): void {
+    this.registerEventHandler('error', callback);
+    
     this.socket?.on('error', (error) => {
       console.error('❌ [Socket] Erreur reçue:', error);
       console.error('🔍 [Socket] Type d\'erreur:', typeof error);
@@ -254,6 +356,19 @@ class SocketService {
 
   offError(): void {
     this.socket?.off('error');
+  }
+
+  // Méthode pour nettoyer tous les écouteurs
+  offAll(): void {
+    if (!this.socket) return;
+    
+    this.socket.off('new-message');
+    this.socket.off('message-sent');
+    this.socket.off('chat-joined');
+    this.socket.off('workspace-joined');
+    this.socket.off('error');
+    
+    console.log('🧹 [Socket] Tous les écouteurs ont été nettoyés');
   }
 }
 
