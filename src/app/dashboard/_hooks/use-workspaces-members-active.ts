@@ -17,6 +17,9 @@ export function useActiveUsersWorkspaces() {
                 setMembersActive(data.data as User[]);
                 setError(data.error||"");
             })
+            .catch((err)=>{
+                setError(err.message);
+            })
             .finally(()=>setIsLoading(false))
         }
     },[currentWorkspace?._id]);

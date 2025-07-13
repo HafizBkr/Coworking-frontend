@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { TaskCard } from "./task-card"
 import type { Task, Status, Column } from "@/types/kanban"
+import { Loader } from "../customs/loader"
 
 interface KanbanColumnProps {
   column: Column
@@ -12,9 +13,10 @@ interface KanbanColumnProps {
   onMoveTask: (taskId: string, newStatus: Status) => void
   onDeleteTask: (taskId: string) => void
   onAssignTask: (taskId: string, assignee: string) => void
+  loading: boolean
 }
 
-export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, onAssignTask }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, onAssignTask, loading }: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -58,22 +60,28 @@ export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, onAssign
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {tasks.length === 0 && (
+        {!loading && tasks.length === 0 && (
           <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
             {isDragOver ? "Déposez la tâche ici" : "Aucune tâche"}
           </div>
         )}
 
-        {tasks.map((task) => (
-          <TaskCard
-            key={task._id}
-            task={task}
-            onAssignTask={onAssignTask}
-            onMoveTask={onMoveTask}
-            onDeleteTask={onDeleteTask}
-            currentStatus={column.id}
-          />
-        ))}
+        {loading ? (
+          <div className="flex items-center justify-center h-96">
+            <Loader/>
+          </div>
+        ) : (
+          tasks.map((task) => (
+            <TaskCard
+              key={task._id}
+              task={task}
+              onAssignTask={onAssignTask}
+              onMoveTask={onMoveTask}
+              onDeleteTask={onDeleteTask}
+              currentStatus={column.id}
+            />
+          ))
+        )}
       </div>
     </div>
   )

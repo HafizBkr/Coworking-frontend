@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react"
 import { ChevronsUpDown, Plus, ProportionsIcon } from "lucide-react"
 
@@ -27,7 +26,7 @@ import { useChatIdStore } from "@/stores/chat-id.store";
 export function WorkSpaceSwitcher() {
   const { isMobile } = useSidebar();
   const { setCurrentWorkspace, currentWorkspace } = useWorkspaceStore();
-  const { workspaces }= useWorkspaces();
+  const { workspaces,error, isLoading }= useWorkspaces();
   const [openDialog, setOpenDialog] = React.useState(false);
   const { clearChatId } = useChatIdStore()
 
@@ -70,12 +69,22 @@ export function WorkSpaceSwitcher() {
             <DropdownMenuLabel className="text-muted-foreground text-xs">
               workspaces
             </DropdownMenuLabel>
+
+            {isLoading && (
+              <DropdownMenuItem disabled className="gap-2 p-2">
+                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <ProportionsIcon className="size-4" />
+                </div>
+                Chargement des workspaces...
+              </DropdownMenuItem>
+            )}
+
             {workspaces?.map((workspace, index) => (
               <DropdownMenuItem
                 key={workspace.name}
                 onClick={() => {
-                  setCurrentWorkspace(workspace);
                   clearChatId()
+                  setCurrentWorkspace(workspace);
                 }}
                 className="gap-2 p-2"
               >
@@ -86,10 +95,30 @@ export function WorkSpaceSwitcher() {
                 <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
               </DropdownMenuItem>
             ))}
+
+            {workspaces?.length === 0 && (
+              <DropdownMenuItem disabled className="gap-2 p-2">
+                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <ProportionsIcon className="size-4" />
+                </div>
+                Aucun workspace disponible
+              </DropdownMenuItem>
+            )}
+
+            {error && (
+              <DropdownMenuItem disabled className="gap-2 p-2">
+                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <ProportionsIcon className="size-4" />
+                </div>
+                {error}
+              </DropdownMenuItem>
+            )}
+
             <DropdownMenuSeparator />
             <DropdownMenuItem
-            onClick={()=>setOpenDialog(true)} 
-            className="gap-2 p-2">
+              onClick={() => setOpenDialog(true)}
+              className="gap-2 p-2"
+            >
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <Plus className="size-4" />
               </div>

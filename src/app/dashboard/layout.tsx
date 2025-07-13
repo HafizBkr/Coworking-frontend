@@ -7,7 +7,7 @@ export default function DashboardLayout({ children }:{ readonly children: React.
   return (
     <SidebarProvider>
         <AppSidebar />
-        <main className='w-full h-full'>
+        <main className='flex-1 flex flex-col bg-background h-svh overflow-hidden'>
             <HeaderDashboard/>
             {children}
         </main>

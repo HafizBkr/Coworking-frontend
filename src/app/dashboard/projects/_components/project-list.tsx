@@ -1,8 +1,8 @@
 "use client";
 import React from 'react'
 import ProjectCard from './project-card'
-import { Button } from '@/components/ui/button'
-import { ChevronDown } from 'lucide-react'
+// import { Button } from '@/components/ui/button'
+// import { ChevronDown } from 'lucide-react'
 import { useProjects } from '../_hooks/use-projects';
 import { Loader } from '@/components/customs/loader';
 
@@ -17,12 +17,18 @@ export function ProjectList() {
             <Loader/>
           </div>
         )}
+        
         <div className='grid md:grid-cols-3  gap-4 w-full'>
             {projects?.map((item)=>(
                 <ProjectCard {...item} key={item._id}/>
             ))}
         </div>
-        <Button className='rounded-full'>Voir plus <ChevronDown/></Button>
-    </div>
+
+        {projects && projects.length === 0 && (
+          <div className='text-center text-muted-foreground'>
+            Aucun projet trouvé.
+          </div>
+        )}
+      </div>
   )
 }

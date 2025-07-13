@@ -43,9 +43,14 @@ export async function getGeneralChatId(workspaceId: string): Promise<APIResponse
   }
 }
 
-export async function getChatMessages(chatId: string): Promise<APIResponse> {
+export async function getChatMessages(chatId: string, limit = 10, before?: string): Promise<APIResponse> {
   try {
-    const res = await api.get(`/chats/${chatId}/messages`);
+    let url = `/chats/${chatId}/messages?limit=${limit}`;
+    if (before) {
+      url += `&before=${before}`;
+    }
+    
+    const res = await api.get(url);
     
     if (res?.data?.error) {
       return {
@@ -68,6 +73,29 @@ export async function getChatMessages(chatId: string): Promise<APIResponse> {
   }
 }
 
+
+export async function createChatPrivate(params: { userId: string, workspaceId: string }): Promise<APIResponse> {
+  try {
+    const res = await api.post("/chats/dm", params);
+    if (res?.data?.error) {
+      return {
+        success: false,
+        message: res?.data.error || "Une erreur s'est produite lors de la création du chat privé",
+      };
+    }
+    return {
+      success: true,
+      message: "Chat privé créé avec succès !",
+      data: res.data.data,
+    };
+  } catch (error) {
+    console.error('Erreur lors de la création du chat privé:', error);
+    return {
+      success: false,
+      message: "Une erreur s'est produite lors de la création du chat privé",
+    };
+  }
+}
 
 
 

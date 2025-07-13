@@ -13,10 +13,18 @@ export interface ChatMessage {
     username: string;
     email: string;
   };
+  readBy?: string[];
   content: string;
   attachments?: string[];
   createdAt: string;
   updatedAt: string;
+  tempId?: string;
+}
+
+export interface TypingStatus {
+  userId: string;
+  username: string;
+  isTyping: boolean;
 }
 
 export function useChat() {
@@ -28,253 +36,356 @@ export function useChat() {
   const { chatId } = useChatIdStore();
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string; email: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [typingUsers, setTypingUsers] = useState<TypingStatus[]>([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [totalMessagesLoaded, setTotalMessagesLoaded] = useState(0);
+  // Nombre de messages à charger par lot
+  const MESSAGES_LIMIT = 10;
+  
+  // Effacer le typingTimeout quand le composant est démonté
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
-  // Récupérer l'utilisateur actuel
   useEffect(() => {
     const getUser = async () => {
-      console.log('👤 [Chat] Récupération de l\'utilisateur actuel...');
       const session = await getSession();
       setCurrentUser(session.data);
-      console.log('✅ [Chat] Utilisateur récupéré:', {
-        id: session.data?.id,
-        username: session.data?.username,
-        email: session.data?.email
-      });
+      console.log('[Chat] Utilisateur récupéré:', session.data);
     };
     getUser();
   }, []);
 
-  // Charger les messages existants
-  const loadMessages = useCallback(async () => {
-    if (!chatId) {
-      console.log('⚠️ [Chat] Impossible de charger les messages: chatId manquant');
-      return;
+  const loadMessages = useCallback(async (loadMore = false) => {
+    if (!chatId) return;
+    
+    if (loadMore) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
     }
-
-    console.log('📥 [Chat] Chargement des messages existants pour le chat:', chatId);
+    
+    console.log('[Chat] Chargement des messages pour chatId:', chatId);
     try {
+      // Récupérer tous les messages du serveur, indépendamment des paramètres
       const response = await getChatMessages(chatId);
+      
       if (response.success && response.data) {
-        const messages = response.data as ChatMessage[];
-        console.log('✅ [Chat] Messages chargés avec succès:', {
-          count: messages.length,
-          chatId: chatId
-        });
-        setMessages(messages);
-      } else {
-        console.error('❌ [Chat] Erreur lors du chargement des messages:', response.message);
+        const allMessages = response.data as ChatMessage[];
+        console.log(`[Chat] ${allMessages.length} messages chargés au total du serveur`);
+        
+        // Trier les messages par date (du plus ancien au plus récent)
+        const sortedMessages = [...allMessages].sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        
+        if (loadMore) {
+          // Si on charge plus de messages, on ajoute les 10 messages plus anciens
+          // que ceux déjà affichés, si disponibles
+          const currentFirstMessage = messages[0];
+          let currentIndex = -1;
+          
+          if (currentFirstMessage) {
+            currentIndex = sortedMessages.findIndex(msg => msg._id === currentFirstMessage._id);
+          }
+          
+          // S'il n'y a pas de message actuellement ou si on n'a pas trouvé le premier message actuel
+          if (currentIndex === -1) {
+            currentIndex = sortedMessages.length;
+          }
+          
+          // Calculer le début de la nouvelle tranche (10 messages avant les messages actuels)
+          const startIndex = Math.max(0, currentIndex - MESSAGES_LIMIT);
+          
+          // Extraire les nouveaux messages à ajouter (entre startIndex et currentIndex)
+          const newMessagesToAdd = sortedMessages.slice(startIndex, currentIndex);
+          
+          // Définir s'il reste des messages à charger
+          setHasMoreMessages(startIndex > 0);
+          
+          // Ajouter les nouveaux messages au début de la liste existante
+          setMessages(prev => {
+            const combinedMessages = [...newMessagesToAdd, ...prev];
+            // Mettre à jour le compteur
+            setTotalMessagesLoaded(combinedMessages.length);
+            return combinedMessages;
+          });
+          
+          console.log(`[Chat] ${newMessagesToAdd.length} messages plus anciens ajoutés`);
+        } else {
+          // Pour le chargement initial, prendre seulement les 10 derniers messages
+          const messagesToShow = sortedMessages.slice(
+            Math.max(0, sortedMessages.length - MESSAGES_LIMIT), 
+            sortedMessages.length
+          );
+          
+          // Définir s'il reste des messages à charger
+          setHasMoreMessages(sortedMessages.length > MESSAGES_LIMIT);
+          
+          // Mettre à jour l'état avec les 10 derniers messages
+          setMessages(messagesToShow);
+          
+          // Réinitialiser le compteur
+          setTotalMessagesLoaded(messagesToShow.length);
+          
+          console.log(`[Chat] ${messagesToShow.length} derniers messages chargés pour l'affichage initial`);
+        }
       }
-    } catch (err) {
-      console.error('❌ [Chat] Erreur lors du chargement des messages:', err);
+    } catch {
+      setError('Erreur lors du chargement des messages');
+      console.error('[Chat] Erreur lors du chargement des messages');
+    } finally {
+      if (loadMore) {
+        setIsLoadingMore(false);
+      } else {
+        setIsLoading(false);
+      }
     }
-  }, [chatId]);
+  }, [chatId, messages]);
 
-  // Connexion Socket.IO
-  const connectSocket = useCallback(async () => {
-    console.log('🚀 [Chat] Début de la connexion au chat');
-    console.log('📊 [Chat] Paramètres de connexion:', {
-      workspaceId: currentWorkspace?._id,
-      chatId: chatId,
-      userId: currentUser?.id
-    });
-
-    if (!currentWorkspace?._id || !chatId) {
-      console.warn('⚠️ [Chat] Paramètres manquants pour la connexion:', {
-        hasWorkspace: !!currentWorkspace?._id,
-        hasChatId: !!chatId
-      });
+  const loadMoreMessages = useCallback(() => {
+    if (!chatId || !hasMoreMessages || isLoadingMore) {
+      console.log('[Chat] Aucun autre message à charger ou chargement déjà en cours');
       return;
     }
+    
+    console.log('[Chat] Chargement de 10 messages plus anciens');
+    loadMessages(true);
+  }, [chatId, hasMoreMessages, isLoadingMore, loadMessages]);
 
+  const connectSocket = useCallback(async () => {
+    if (!currentWorkspace?._id || !chatId) return;
     setIsLoading(true);
     setError(null);
-
+    console.log('[Chat] Tentative de connexion socket pour chatId:', chatId, 'workspaceId:', currentWorkspace?._id);
     try {
-      // Charger les messages existants d'abord
-      console.log('📥 [Chat] Chargement des messages existants...');
-      await loadMessages();
-
-      console.log('🔌 [Chat] Connexion au service Socket.IO...');
+      await loadMessages(false);
       let socket = await socketService.connect();
+      if (!socket) socket = await socketService.forceReconnect();
+      if (!socket) throw new Error('Impossible de se connecter au chat');
+      setIsConnected(true);
+      console.log('[Chat] Socket connecté, join workspace:', currentWorkspace._id);
+      await socketService.joinWorkspace(currentWorkspace._id);
+      console.log('[Chat] Join chat:', chatId);
+      await socketService.joinChat(chatId);
       
-      // Si la connexion échoue, essayer une reconnexion forcée
-      if (!socket) {
-        console.log('⚠️ [Chat] Première tentative de connexion échouée, tentative de reconnexion forcée...');
-        socket = await socketService.forceReconnect();
-      }
-      
-      if (socket) {
-        console.log('✅ [Chat] Socket connecté avec succès');
-        setIsConnected(true);
-        
-        // Rejoindre le workspace et le chat
-        console.log('📥 [Chat] Rejoindre le workspace et le chat...');
-        await socketService.joinWorkspace(currentWorkspace._id);
-        await socketService.joinChat(chatId);
-
-        // Nettoyer les anciens écouteurs avant d'en ajouter de nouveaux
-        socketService.offNewMessage();
-        socketService.offMessageSent();
-        socketService.offChatJoined();
-        socketService.offWorkspaceJoined();
-        socketService.offError();
-
-        // Écouter les nouveaux messages
-        socketService.onNewMessage((data) => {
-          console.log('[Socket] Nouveau message reçu', data);
-          setMessages(prev => {
-            // Vérifier si le message n'existe pas déjà
-            const messageExists = prev.some(msg => msg._id === data._id);
-            if (!messageExists) {
-              return [...prev, data];
-            }
-            return prev;
-          });
-        });
-
-        // Écouter la confirmation d'envoi de message
-        socketService.onMessageSent((data) => {
-          console.log('✅ [Chat] Message envoyé confirmé:', data);
-        });
-
-        // Écouter les événements de connexion
-        socketService.onChatJoined((data) => {
-          console.log('📥 [Chat] Chat rejoint confirmé dans le hook:', data.chatId);
-        });
-
-        socketService.onWorkspaceJoined((data) => {
-          console.log('📥 [Chat] Workspace rejoint confirmé dans le hook:', data.workspaceId);
-        });
-
-        // Écouter les erreurs
-        socketService.onError((error) => {
-          console.error('❌ [Chat] Erreur Socket.IO reçue dans le hook:', error);
-          setError('Erreur de connexion au chat');
-        });
-
-        console.log('✅ [Chat] Tous les écouteurs d\'événements configurés');
-
-      } else {
-        console.error('❌ [Chat] Impossible de se connecter au socket');
-        setError('Impossible de se connecter au chat');
-      }
-    } catch (err) {
-      console.error('❌ [Chat] Erreur lors de la connexion:', err);
-      console.error('🔍 [Chat] Type d\'erreur:', typeof err);
-      setError('Erreur lors de la connexion au chat');
-    } finally {
-      console.log('🏁 [Chat] Fin de la tentative de connexion');
-      setIsLoading(false);
-    }
-  }, [currentWorkspace?._id, chatId, loadMessages]);
-
-  // Déconnexion
-  const disconnectSocket = useCallback(() => {
-    console.log('🔌 [Chat] Déconnexion du chat');
-    socketService.disconnect();
-    setIsConnected(false);
-    setMessages([]);
-    console.log('✅ [Chat] Chat déconnecté et messages vidés');
-  }, []);
-
-  // Envoyer un message
-  const sendMessage = useCallback(async (content: string) => {
-    console.log('📤 [Chat] Tentative d\'envoi de message:', {
-      content: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
-      chatId,
-      isConnected,
-      userId: currentUser?.id
-    });
-
-    if (!chatId || !content.trim() || !isConnected) {
-      console.warn('⚠️ [Chat] Impossible d\'envoyer le message:', {
-        hasChatId: !!chatId,
-        hasContent: !!content.trim(),
-        isConnected
-      });
-      return;
-    }
-
-    try {
-      console.log('🚀 [Chat] Envoi du message via Socket.IO...');
-      await socketService.sendMessage(chatId, content.trim());
-      console.log('✅ [Chat] Message envoyé avec succès');
-    } catch (err) {
-      console.error('❌ [Chat] Erreur lors de l\'envoi du message:', err);
-      setError('Erreur lors de l\'envoi du message');
-    }
-  }, [chatId, isConnected, currentUser]);
-
-  // Scroll automatique vers le bas
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  // Méthode pour vérifier et reconnecter si nécessaire
-  const checkAndReconnect = useCallback(async () => {
-    if (!isConnected && currentWorkspace?._id && chatId) {
-      console.log('🔄 [Chat] Vérification de reconnexion nécessaire...');
-      await connectSocket();
-    }
-  }, [isConnected, currentWorkspace?._id, chatId, connectSocket]);
-
-  // Effet pour surveiller les changements de connexion et tenter une reconnexion
-  useEffect(() => {
-    if (!isConnected && currentWorkspace?._id && chatId && !isLoading) {
-      console.log('🔄 [Chat] Détection de déconnexion, tentative de reconnexion automatique...');
-      const timeoutId = setTimeout(() => {
-        checkAndReconnect();
-      }, 2000); // Attendre 2 secondes avant de tenter la reconnexion
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isConnected, currentWorkspace?._id, chatId, isLoading, checkAndReconnect]);
-
-  // Connexion/déconnexion automatique
-  useEffect(() => {
-    console.log('🔄 [Chat] Vérification des conditions de connexion:', {
-      hasWorkspace: !!currentWorkspace?._id,
-      hasChatId: !!chatId,
-      workspaceId: currentWorkspace?._id,
-      chatId: chatId
-    });
-
-    if (currentWorkspace?._id && chatId) {
-      console.log('✅ [Chat] Conditions remplies, connexion au chat');
-      
-      // Ajouter un délai pour éviter les connexions multiples lors du rafraîchissement
-      const timeoutId = setTimeout(() => {
-        connectSocket();
-      }, 100);
-
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    } else {
-      console.log('❌ [Chat] Conditions non remplies, déconnexion du chat');
-      disconnectSocket();
-    }
-
-    // Nettoyage à la déconnexion
-    return () => {
-      console.log('🧹 [Chat] Nettoyage des écouteurs d\'événements');
-      // Ne pas nettoyer les écouteurs ici car ils sont gérés dans connectSocket
-    };
-  }, [currentWorkspace?._id, chatId, connectSocket, disconnectSocket]);
-
-  // Nettoyage des écouteurs lors du démontage du composant
-  useEffect(() => {
-    return () => {
-      console.log('🧹 [Chat] Démontage du composant - nettoyage des écouteurs');
+      // Nettoyage des listeners précédents (pour éviter les doublons)
       socketService.offNewMessage();
       socketService.offMessageSent();
       socketService.offChatJoined();
       socketService.offWorkspaceJoined();
       socketService.offError();
+      socketService.offTypingStatus();
+      
+      // Réinitialiser la liste des utilisateurs en train de taper
+      setTypingUsers([]);
+      
+      // Mise en place des nouveaux listeners
+      socketService.onNewMessage((data) => {
+        console.log('[Chat] new-message reçu:', data);
+        setMessages(prev => {
+          // Remplace le message optimiste par le vrai (même contenu ET même sender._id)
+          const filtered = prev.filter(msg =>
+            !(msg.tempId && msg.content === data.content && msg.sender._id === data.sender._id)
+          );
+          if (!filtered.some(msg => msg._id === data._id)) {
+            // Incrémenter le compteur uniquement si c'est un nouveau message (pas un remplacement de message temporaire)
+            setTotalMessagesLoaded(prevCount => prevCount + 1);
+            return [...filtered, data];
+          }
+          return filtered;
+        });
+        
+        // Si quelqu'un envoie un message, on supprime son indicateur de frappe
+        setTypingUsers(prev => prev.filter(user => user.userId !== data.sender._id));
+      });
+      
+      socketService.onMessageSent((data) => {
+        console.log('[Chat] message-sent reçu:', data);
+      });
+      
+      socketService.onChatJoined((data) => {
+        console.log('[Chat] chat-joined reçu:', data);
+      });
+      
+      socketService.onWorkspaceJoined((data) => {
+        console.log('[Chat] workspace-joined reçu:', data);
+      });
+      
+      socketService.onTypingStatus((data) => {
+        console.log('[Chat] Événement de frappe reçu:', data);
+        
+        // Ignorer les événements qui ne concernent pas le chat actuel
+        if (data.chatId !== chatId) {
+          console.log(`[Chat] Ignoré car cet événement concerne un autre chat (${data.chatId})`);
+          return;
+        }
+        
+        // Ignore ses propres événements de frappe
+        if (currentUser && data.userId === currentUser.id) {
+          console.log('[Chat] Ignoré car c\'est mon propre événement de frappe');
+          return;
+        }
+        
+        if (data.isTyping) {
+          console.log(`[Chat] ${data.username} est en train d'écrire...`);
+          // Ajouter l'utilisateur à la liste de ceux qui écrivent
+          setTypingUsers(prev => {
+            if (!prev.some(user => user.userId === data.userId)) {
+              return [...prev, data];
+            }
+            return prev;
+          });
+          
+          // Supprimer l'utilisateur après 3 secondes s'il n'y a pas d'autre événement
+          setTimeout(() => {
+            console.log(`[Chat] Fin automatique du typing pour ${data.username} après 3 secondes`);
+            setTypingUsers(prev => prev.filter(user => user.userId !== data.userId));
+          }, 3000);
+        } else {
+          console.log(`[Chat] ${data.username} a arrêté d'écrire`);
+          // Supprimer immédiatement l'utilisateur de la liste
+          setTypingUsers(prev => prev.filter(user => user.userId !== data.userId));
+        }
+      });
+      
+      socketService.onError((err) => {
+        setError('Erreur de connexion au chat');
+        console.error('[Chat] Erreur socket:', err);
+      });
+    } catch {
+      setError('Erreur lors de la connexion au chat');
+      console.error('[Chat] Erreur lors de la connexion au chat');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentWorkspace?._id, chatId, loadMessages]);
+
+  const disconnectSocket = useCallback(() => {
+    socketService.disconnect();
+    setIsConnected(false);
+    setMessages([]);
+    setTypingUsers([]);
+    setTotalMessagesLoaded(0);
+    console.log('[Chat] Déconnexion socket');
+  }, []);
+
+  const sendMessage = useCallback(async (content: string) => {
+    if (!chatId || !content.trim() || !isConnected) return;
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage: ChatMessage = {
+      _id: tempId,
+      chatId,
+      sender: {
+        _id: currentUser?.id || '',
+        username: currentUser?.username || '',
+        email: currentUser?.email || ''
+      },
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      tempId
+    };
+    setMessages(prev => [...prev, tempMessage]);
+    // Ne pas incrémenter le compteur ici car le message temporaire sera remplacé
+    // par le vrai message et le compteur sera mis à jour à ce moment-là
+    console.log('[Chat] Envoi du message:', tempMessage);
+    
+    // Arrêter d'envoyer le statut de frappe quand on envoie un message
+    if (currentUser) {
+      await socketService.sendTyping(chatId, false);
+    }
+    
+    try {
+      await socketService.sendMessage(chatId, content.trim(), tempId);
+      console.log('[Chat] sendMessage émis pour chatId:', chatId, 'tempId:', tempId);
+    } catch {
+      setMessages(prev => prev.filter(msg => msg._id !== tempId));
+      setError('Erreur lors de l\'envoi du message');
+      console.error('[Chat] Erreur lors de l\'envoi du message');
+    }
+  }, [chatId, isConnected, currentUser]);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+  
+  // Scroll to bottom lorsque de nouveaux messages sont ajoutés ou quand quelqu'un commence à taper
+  useEffect(() => {
+    // Ne pas scroller si on charge d'anciens messages (isLoadingMore)
+    if (!isLoadingMore) {
+      scrollToBottom();
+    }
+  }, [messages, typingUsers, scrollToBottom, isLoadingMore]);
+
+  // Fonction pour gérer la saisie de l'utilisateur (typing)
+  const handleTyping = useCallback((isTyping: boolean) => {
+    if (!chatId || !currentUser || !isConnected) {
+      console.log('[Chat] Impossible d\'envoyer le statut de frappe:', { chatId, currentUser: !!currentUser, isConnected });
+      return;
+    }
+    
+    console.log(`[Chat] Envoi du statut de frappe: ${isTyping ? 'commence à taper' : 'arrête de taper'}`);
+    
+    // Si l'utilisateur commence à taper, envoyer immédiatement l'événement
+    if (isTyping) {
+      socketService.sendTyping(chatId, true);
+      
+      // Effacer le timeout précédent si existant
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Définir un nouveau timeout pour arrêter le statut de frappe après 3 secondes
+      typingTimeoutRef.current = setTimeout(() => {
+        console.log('[Chat] Fin automatique du typing après 3 secondes d\'inactivité');
+        socketService.sendTyping(chatId, false);
+      }, 3000);
+    } else {
+      // Si l'utilisateur arrête de taper, envoyer immédiatement l'événement
+      socketService.sendTyping(chatId, false);
+      
+      // Effacer le timeout s'il existait
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    }
+  }, [chatId, currentUser, isConnected]);
+
+  useEffect(() => {
+    if (currentWorkspace?._id && chatId) {
+      console.log('[Chat] Connexion/déconnexion automatique, chatId:', chatId, 'workspaceId:', currentWorkspace._id);
+      // Réinitialiser l'état à chaque changement de chat ou d'espace de travail
+      setHasMoreMessages(true);
+      setMessages([]);
+      setTypingUsers([]);
+      setTotalMessagesLoaded(0);
+      connectSocket();
+      return () => disconnectSocket();
+    }
+  }, [currentWorkspace?._id, chatId]);
+
+  useEffect(() => {
+    return () => {
+      socketService.offNewMessage();
+      socketService.offMessageSent();
+      socketService.offChatJoined();
+      socketService.offWorkspaceJoined();
+      socketService.offError();
+      socketService.offTypingStatus();
+      console.log('[Chat] Nettoyage listeners socket');
+      
+      // Nettoyage du timeout typing
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -287,6 +398,12 @@ export function useChat() {
     scrollToBottom,
     messagesEndRef,
     currentUser,
-    checkAndReconnect
+    checkAndReconnect: connectSocket,
+    loadMoreMessages,
+    isLoadingMore,
+    hasMoreMessages,
+    typingUsers,
+    handleTyping,
+    totalMessagesLoaded // Ajout du compteur de messages chargés
   };
 }

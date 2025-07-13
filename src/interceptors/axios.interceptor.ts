@@ -55,7 +55,12 @@ api.interceptors.response.use(
           }
         case 403:
             console.error('Erreur 403: Accès interdit');
-            throw Error('Erreur 403: Accès interdit')
+            return {
+              data: {
+                success:false,
+                error: "Accès interdit !"
+              }
+            };
         case 404:
             console.error('Erreur 404: Ressource non trouvée');
             return {

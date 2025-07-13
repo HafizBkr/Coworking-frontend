@@ -142,7 +142,7 @@ function VirtualSpaceCardItem({member}:{member: User}){
     <div className='flex justify-between'>
       <div className='flex gap-2'>
         <div className='size-14 relative overflow-hidden shrink-0 rounded-full bg-primary'>
-          <Image src={svg} alt={member.username} fill className='rounded-full'/>
+          <Image src={svg} alt={member.email} fill className='rounded-full'/>
         </div>
         <div>
           <h1 className='text-xl font-semibold'>{member.email}</h1>
@@ -184,8 +184,8 @@ function VirtualSpaceCard(){
             />
         </div>
       </div>
-      <div className='relative rounded-xl m-4 overflow-hidden'>
-      <div className="pointer-events-none z-10 absolute inset-x-0 top-0 h-[6%] bg-gradient-to-b from-background"></div>
+      {membersActive && <div className='relative rounded-xl m-4 overflow-hidden'>
+      <div className="pointer-events-none z-10 absolute inset-x-0 top-0 h-[6%] bg-gradient-to-b from-background"/>
         <ScrollArea className='h-72 '>
           <div className='space-y-4 m-4'>
             {membersActive?.map((member,index)=>(
@@ -193,9 +193,19 @@ function VirtualSpaceCard(){
             ))}
           </div>
         </ScrollArea>
-        
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[10%] bg-gradient-to-t from-background"></div>
-      </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[10%] bg-gradient-to-t from-background"/>
+      </div>}
+      {membersActive?.length === 0 && (
+        <div className='flex flex-col items-center justify-center h-72'>
+          <Image 
+            src={"/icons/empty.svg"}
+            alt='/icons/empty.svg'
+            width={100}
+            height={100}
+          />
+          <p className='text-muted-foreground'>Aucun membre en ligne</p>
+        </div>
+      )}
     </div>
   )
 }

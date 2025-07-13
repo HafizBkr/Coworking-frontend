@@ -79,6 +79,7 @@ export function useChatGeneral() {
     // Définir automatiquement le chat général comme chat actif s'il est disponible
     // et qu'aucun autre chat n'est sélectionné
     useEffect(() => {
+        // clearChatId()
         if (chatGeneral && chatGeneral._id) {
             console.log('🔄 [ChatGeneral] Définition du chat général comme chat actif:', chatGeneral._id);
             setChatId(chatGeneral._id);

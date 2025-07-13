@@ -1,15 +1,14 @@
 /* eslint-disable react/react-in-jsx-scope */
 "use client"
 import { KanbanBoard } from "@/components/kanban/kanban-board"
-import { TaskStats } from "@/components/kanban/task-stats"
+
 import { useKanban } from "@/hooks/use-kanban"
 import { SearchBar } from "./search-bar"
 import { AddTaskDialog } from "./add-task-dialog"
 import type { NewTaskForm } from "@/types/kanban"
 
 export function KanbanDashboard() {
-  const { tasks, getTasksByStatus,searchTerm,addTask, setSearchTerm , moveTask, deleteTask, assignTask } = useKanban()
-
+  const { getTasksByStatus,searchTerm,addTask, setSearchTerm , moveTask, deleteTask, assignTask, loading } = useKanban()
   // Fonction d'adaptation pour AddTaskDialog
   const handleAddTask = async (task: NewTaskForm) => {
     const formData = new FormData();
@@ -31,11 +30,9 @@ export function KanbanDashboard() {
           <AddTaskDialog onAddTask={handleAddTask} />
         </div>
         {/* Kanban Board */}
-        <KanbanBoard getTasksByStatus={getTasksByStatus} onMoveTask={moveTask} onDeleteTask={deleteTask} onAssignTask={assignTask} />
+        <KanbanBoard loading={loading} getTasksByStatus={getTasksByStatus} onMoveTask={moveTask} onDeleteTask={deleteTask} onAssignTask={assignTask} />
         {/* Stats */}
-        <div className="mt-8">
-          <TaskStats tasks={tasks} getTasksByStatus={getTasksByStatus} />
-        </div>
+
       </div>
   )
 }

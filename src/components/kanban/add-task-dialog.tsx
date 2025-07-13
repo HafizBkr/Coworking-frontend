@@ -64,7 +64,7 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
           <DialogTitle>Créer une nouvelle tâche</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="title">Titre</Label>
             <Input
               id="title"
@@ -73,7 +73,7 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
               placeholder="Titre de la tâche"
             />
           </div>
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
@@ -82,7 +82,7 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
               placeholder="Description de la tâche"
             />
           </div>
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="priority">Priorité</Label>
             <Select
               value={newTask.priority}
@@ -98,7 +98,7 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="status">Statut</Label>
             <Select
               value={newTask.status}
@@ -114,7 +114,7 @@ export function AddTaskDialog({ onAddTask }: AddTaskDialogProps) {
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="dueDate">Date d&apos;échéance</Label>
             <Input
               id="dueDate"

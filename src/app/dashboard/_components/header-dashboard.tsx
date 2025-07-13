@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 export function HeaderDashboard() {
 
   return (
-    <header className='border-b flex items-center gap-2 justify-between  p-2 h-16 '>
+    <header className='border-b flex bg-background items-center gap-2 sticky top-0 z-20 justify-between  p-2 h-16 '>
         <div className='max-w-52 w-full'>
             <WorkSpaceSwitcher />
         </div>

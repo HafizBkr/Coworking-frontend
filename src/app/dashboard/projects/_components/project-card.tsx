@@ -20,32 +20,29 @@ import { routes } from '@/config/routes';
 import { useProjectStore } from '@/stores/project.store';
 
 export default function ProjectCard(project:Project) {
-  const avatar = createAvatar(glass);
+  const avatar = createAvatar(glass,{
+    seed: project._id
+  });
   const svg = avatar.toDataUri();
   const { setCurrentProject } = useProjectStore();
   return (
     <div className='w-full hover:scale-105 transition-all ease-in-out duration-300 group  p-4 bg-background border shadow rounded-xl relative'>
-        <div className='flex gap-2'>
-            <div className='size-12 shrink-0 relative rounded-full overflow-hidden'>
-                <Image
-                src={svg}
-                alt={svg}
-                fill
-                />
-            </div>
-            <Link 
-            onClick={()=>setCurrentProject(project)}
-            prefetch 
-            href={routes.dashboard.projects+`/${project._id}`} className='max-w-md hover:underline w-full'>
-                <h1 className='text-lg font-semibold'>{project.name}</h1>
-                <p className='text-muted-foreground text-sm line-clamp-2'>{project.description}</p>
-            </Link>
+      <div className='flex gap-2'>
+        <div className='size-12 shrink-0 relative rounded-full overflow-hidden'>
+            <Image
+            src={svg}
+            alt={svg}
+            fill
+            />
+          </div>
+          <Link 
+          onClick={()=>setCurrentProject(project)}
+          prefetch 
+          href={routes.dashboard.projects+`/${project._id}`} className=' max-w-40 w-full hover:underline '>
+            <h1 className='text-lg font-semibold truncate '>{project.name}</h1>
+            <p className='text-muted-foreground w-full text-sm truncate '>{project.description}</p>
+          </Link>
         </div>
-        {/* <div className='flex  items-center mt-4 justify-between'>
-          <Badge className='rounded-full dark:text-white'>{format(project.startDate,"PPP")}</Badge>
-
-          <Badge className='rounded-full  dark:text-white'>{format(project.endDate,"PPP")}</Badge>
-        </div> */}
         <div className='absolute -z-20 group-hover:z-0 top-2 right-2'>
             <OptionsProjects 
             projectId={project._id} 
