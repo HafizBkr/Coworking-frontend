@@ -18,7 +18,7 @@ export function useVideoConference() {
   const { currentWorkspace } = useWorkspaceStore();
   const params = useParams();
   const roomId = params.meetId as string;
-  
+
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -133,13 +133,13 @@ export function useVideoConference() {
           wasClean: event.wasClean
         });
         setIsConnected(false);
-        setIsConnecting(false);
-        
+      setIsConnecting(false);
+      
         if (event.code !== 1000) { // Fermeture normale
           toast.info('Déconnecté de la salle de conférence');
         }
       };
-
+      
     } catch (error) {
       console.error('[useVideoConference] Connection failed:', error);
       setError('Impossible de se connecter à la salle');
@@ -167,12 +167,12 @@ export function useVideoConference() {
         break;
       }
         
-      case 'join':
+          case 'join':
         toast.success(`${message.data.user} a rejoint la conférence`);
         console.log('[useVideoConference] User joined:', message.data.user);
-        break;
-        
-      case 'leave':
+            break;
+            
+          case 'leave':
         toast.info(`${message.data.user} a quitté la conférence`);
         console.log('[useVideoConference] User left:', message.data.user);
         break;
@@ -190,8 +190,8 @@ export function useVideoConference() {
       case 'video_off':
         toast.info(`${message.data.user} a coupé sa caméra`);
         console.log('[useVideoConference] User video off:', message.data.user);
-        break;
-        
+            break;
+            
       case 'video_on':
         toast.info(`${message.data.user} a rallumé sa caméra`);
         console.log('[useVideoConference] User video on:', message.data.user);
@@ -207,13 +207,20 @@ export function useVideoConference() {
         console.log('[useVideoConference] User stopped screen share:', message.data.user);
         break;
         
-      case 'error':
-        console.error('[useVideoConference] Server error:', message.data);
-        toast.error(`Erreur serveur: ${message.data}`);
-        break;
+              case 'error':
+          console.error('[useVideoConference] Server error:', message.data);
+          toast.error(`Erreur serveur: ${message.data}`);
+          break;
         
-      default:
-        console.log('[useVideoConference] Unhandled message type:', message.type, message.data);
+        case 'offer':
+        case 'answer':
+        case 'candidate':
+          console.log('[useVideoConference] WebRTC signaling message:', message.type, message.data);
+          // Ici on pourrait gérer la signalisation WebRTC si nécessaire
+          break;
+        
+        default:
+          console.log('[useVideoConference] Unhandled message type:', message.type, message.data);
     }
   }, []);
 
@@ -250,7 +257,7 @@ export function useVideoConference() {
 
   // Se connecter automatiquement
   useEffect(() => {
-    connect();
+      connect();
   }, [connect]);
 
   // Nettoyer la connexion

@@ -12,8 +12,8 @@ import { useRouter } from 'next/navigation';
 
 export function CreateMeetButton() {
   const session = useSessionContext();
-  const { currentWorkspace } = useWorkspaceStore();
-  const router = useRouter();
+    const { currentWorkspace } = useWorkspaceStore();
+    const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [createdRoomId, setCreatedRoomId] = useState<string | null>(null);
 
@@ -25,8 +25,8 @@ export function CreateMeetButton() {
 
     if (!currentWorkspace?._id) {
       toast.error('Veuillez sélectionner un workspace');
-      return;
-    }
+            return;
+        }
 
     try {
       setIsCreating(true);
@@ -142,7 +142,7 @@ export function CreateMeetButton() {
                 onClick={createNewRoom}
               >
                 Nouvelle salle
-              </Button>
+        </Button>
             </div>
           </>
         )}

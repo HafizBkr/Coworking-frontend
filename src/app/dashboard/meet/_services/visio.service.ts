@@ -22,6 +22,7 @@ export type WSMessage =
   | { type: "chat"; data: { user: string; message: string } }
   | { type: "join" | "leave"; data: { user: string } }
   | { type: "mute" | "unmute" | "video_on" | "video_off" | "screen_share_start" | "screen_share_stop"; data: { user: string } }
+  | { type: "offer" | "answer" | "candidate"; data: any } // WebRTC signaling
   | { type: string; data: any }; // fallback
 
 export class VisioService {
@@ -58,15 +59,14 @@ export class VisioService {
 
   /**
    * Créer une nouvelle salle de visioconférence
-   * Selon la doc: POST https://visoconf-service-go.onrender.com/rooms
-   * Mais le backend utilise: POST /api/visio/room
+   * Backend utilise: POST /api/visio/room (pas /rooms comme dans la doc)
    */
   static async createRoom(workspaceId: string, sessionToken: string): Promise<CreateRoomResponse> {
     try {
       console.log('[VisioService] Creating room with:', {
         workspaceId,
         sessionTokenPreview: sessionToken.substring(0, 20) + '...',
-        url: `${API_BASE_URL}/api/visio/room`
+        url: `${API_BASE_URL}/api/visio/room` // URL correcte selon le backend
       });
 
       // Récupérer le bon token JWT
@@ -74,7 +74,7 @@ export class VisioService {
       console.log('[VisioService] Using JWT token:', jwtToken.substring(0, 20) + '...');
 
       const response = await axios.post(
-        `${API_BASE_URL}/api/visio/room`,
+        `${API_BASE_URL}/api/visio/room`, // URL correcte selon le backend
         { workspaceId },
         {
           headers: {
@@ -112,13 +112,14 @@ export class VisioService {
   /**
    * Créer une connexion WebSocket pour rejoindre une salle
    * Selon la doc: wss://visoconf-service-go.onrender.com/ws/room/{roomId}
-   * Avec token dans l'URL car les navigateurs ne permettent pas les headers
+   * Le backend accepte le token dans l'URL comme fallback
    */
   static async createWebSocketConnection(roomId: string, sessionToken: string): Promise<WebSocket> {
     // Récupérer le bon token JWT
     const jwtToken = await this.getValidJWTToken(sessionToken);
     console.log('[VisioService] Using JWT token for WebSocket:', jwtToken.substring(0, 20) + '...');
     
+    // URL selon la documentation exacte
     const wsUrl = `${API_BASE_URL.replace('https://', 'wss://')}/ws/room/${roomId}?token=${encodeURIComponent(jwtToken)}`;
     console.log('[VisioService] Connecting to WebSocket:', wsUrl);
     
@@ -137,5 +138,12 @@ export class VisioService {
     } else {
       console.warn('[VisioService] WebSocket not connected, cannot send message');
     }
+  }
+
+  /**
+   * Envoyer un message de signalisation WebRTC
+   */
+  static sendWebRTCMessage(ws: WebSocket, type: 'offer' | 'answer' | 'candidate', data: any): void {
+    this.sendMessage(ws, type, data);
   }
 }
