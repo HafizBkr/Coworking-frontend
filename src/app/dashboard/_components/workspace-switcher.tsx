@@ -1,7 +1,6 @@
 "use client";
-
 import * as React from "react"
-import { ChevronsUpDown, Plus } from "lucide-react"
+import { ChevronsUpDown, Plus, ProportionsIcon } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -18,27 +17,31 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useWorkspaces } from "../_hooks/use-workspaces";
+import { WorkspaceDialog } from "./workspace-dialog";
+import { useWorkspaceStore } from "@/stores/workspace.store";
+import { useChatIdStore } from "@/stores/chat-id.store";
 
 
-type WorkSpaceSwitcherProps = {
-    workspaces: {
-        name: string
-        logo: React.ElementType
-        plan: string
-      }[]
-}
+export function WorkSpaceSwitcher() {
+  const { isMobile } = useSidebar();
+  const { setCurrentWorkspace, currentWorkspace } = useWorkspaceStore();
+  const { workspaces,error, isLoading }= useWorkspaces();
+  const [openDialog, setOpenDialog] = React.useState(false);
+  const { clearChatId } = useChatIdStore()
 
-export function WorkSpaceSwitcher({
-  workspaces,
-}: WorkSpaceSwitcherProps) {
-  const { isMobile } = useSidebar()
-  const [ActiveWorkspace, setActiveWorkspace] = React.useState(workspaces[0])
+  // if(!workspaces?.[0]){
+  //   return null
+  // }
 
-  if (!ActiveWorkspace) {
-    return null
-  }
+  // if (!ActiveWorkspace) {
+  //   return null
+  // }
+
+
 
   return (
+    <>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -48,11 +51,11 @@ export function WorkSpaceSwitcher({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <ActiveWorkspace.logo className="size-4" />
+                <ProportionsIcon  className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{ActiveWorkspace.name}</span>
-                <span className="truncate text-xs">{ActiveWorkspace.plan}</span>
+                <span className="truncate font-semibold">{currentWorkspace?.name||"Workspaces"}</span>
+                <span className="truncate text-muted-foreground text-xs">{currentWorkspace?.description||"Selectionner un workspace"}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
@@ -66,29 +69,66 @@ export function WorkSpaceSwitcher({
             <DropdownMenuLabel className="text-muted-foreground text-xs">
               workspaces
             </DropdownMenuLabel>
-            {workspaces.map((workspace, index) => (
+
+            {isLoading && (
+              <DropdownMenuItem disabled className="gap-2 p-2">
+                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <ProportionsIcon className="size-4" />
+                </div>
+                Chargement des workspaces...
+              </DropdownMenuItem>
+            )}
+
+            {workspaces?.map((workspace, index) => (
               <DropdownMenuItem
                 key={workspace.name}
-                onClick={() => setActiveWorkspace(workspace)}
+                onClick={() => {
+                  clearChatId()
+                  setCurrentWorkspace(workspace);
+                }}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">
-                  <workspace.logo className="size-3.5 shrink-0" />
+                  <ProportionsIcon className="size-3.5 shrink-0" />
                 </div>
                 {workspace.name}
                 <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
               </DropdownMenuItem>
             ))}
+
+            {workspaces?.length === 0 && (
+              <DropdownMenuItem disabled className="gap-2 p-2">
+                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <ProportionsIcon className="size-4" />
+                </div>
+                Aucun workspace disponible
+              </DropdownMenuItem>
+            )}
+
+            {error && (
+              <DropdownMenuItem disabled className="gap-2 p-2">
+                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <ProportionsIcon className="size-4" />
+                </div>
+                {error}
+              </DropdownMenuItem>
+            )}
+
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2">
+            <DropdownMenuItem
+              onClick={() => setOpenDialog(true)}
+              className="gap-2 p-2"
+            >
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <Plus className="size-4" />
               </div>
-              <div className="text-muted-foreground font-medium">Add workspace</div>
+              <div className="text-muted-foreground font-medium">Ajouter un workspace</div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+    <WorkspaceDialog open={openDialog} setOpen={setOpenDialog}/>
+    </>
   )
 }

@@ -14,9 +14,8 @@ export async function encrypt(payload: SessionPayload) {
     .setExpirationTime("12h")
     .sign(encodedKey);
 }
-
+// encry
 export async function decrypt(session: string | undefined = "") {
-
     if(!session){
       return
     }

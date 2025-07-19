@@ -4,11 +4,32 @@
 import * as React from "react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
+import { routes } from "@/config/routes";
 
 const Navbar1 = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
+
+  // const nav = [
+  //   {
+  //     label: "Home",
+  //     url: ""
+  //   },
+  //   {
+  //     label: "Pricing",
+  //     url: ""
+  //   },
+  //   {
+  //     label: "Docs",
+  //     url: ""
+  //   },
+  //   {
+  //     label: "Projects",
+  //     url: ""
+  //   }
+  // ]
 
   return (
     <div className="fixed top-0 left-0 right-0 flex justify-center w-full py-6 px-4 bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
@@ -44,20 +65,22 @@ const Navbar1 = () => {
 
         {/* Desktop CTA Buttons */}
         <div className="hidden md:flex space-x-3">
-          <a
-            href="#"
-            className="inline-flex items-center justify-center px-5 py-2 text-sm text-black bg-white border border-black rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-105 opacity-0 animate-fade-in-right"
-            style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
-          >
-            Login
-          </a>
-          <a
-            href="#"
-            className="inline-flex items-center justify-center px-5 py-2 text-sm text-white bg-black rounded-full hover:bg-gray-800 transition-all duration-200 hover:scale-105 opacity-0 animate-fade-in-right"
-            style={{ animationDelay: "250ms", animationFillMode: "forwards" }}
-          >
-            Signup
-          </a>
+          <Link href={routes.auth.signin}>
+            <div
+              className="inline-flex items-center justify-center px-5 py-2 text-sm text-black bg-white border border-black rounded-full hover:bg-gray-100 transition-all duration-200 hover:scale-105 opacity-0 animate-fade-in-right"
+              style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
+            >
+              Login
+            </div>
+          </Link>
+          <Link href={routes.auth.signup}>
+            <div
+              className="inline-flex items-center justify-center px-5 py-2 text-sm text-white bg-black rounded-full hover:bg-gray-800 transition-all duration-200 hover:scale-105 opacity-0 animate-fade-in-right"
+              style={{ animationDelay: "250ms", animationFillMode: "forwards" }}
+            >
+              Signup
+            </div>
+          </Link>
         </div>
 
         {/* Mobile Menu Button */}
