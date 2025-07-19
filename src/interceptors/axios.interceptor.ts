@@ -6,7 +6,10 @@ const api: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL!,
   headers: {
     'Content-Type': 'application/json',
-  }
+    'Accept': 'application/json',
+  },
+  withCredentials: false, // Important pour les requêtes CORS
+  timeout: 10000, // Timeout de 10 secondes
 });
 
 // Intercepteur pour les requêtes
@@ -78,8 +81,21 @@ api.interceptors.response.use(
 
     } else if (error.request) {
       console.error('Erreur de requête: Pas de réponse reçue');
+      // Retourner une réponse d'erreur standardisée pour les erreurs réseau
+      return {
+        data: {
+          success: false,
+          error: "Impossible de se connecter au serveur. Vérifiez votre connexion internet."
+        }
+      };
     } else {
       console.error('Erreur:', error.message);
+      return {
+        data: {
+          success: false,
+          error: "Une erreur inattendue s'est produite."
+        }
+      };
     }
     
     return Promise.reject(error);

@@ -183,14 +183,11 @@ class SocketService {
   async sendTyping(chatId: string, isTyping: boolean): Promise<void> {
     if (this.socket?.connected) {
       console.log('⌨️ [Socket] Envoi du statut de frappe:', { chatId, isTyping });
-      
-      // Les événements sont différents pour démarrer ou arrêter la frappe
-      const eventName = isTyping ? 'typing-start' : 'typing-stop';
-      
-      this.socket.emit(eventName, {
-        chatId
+      this.socket.emit('typing', {
+        chatId,
+        isTyping
       });
-      console.log(`⌨️ [Socket] Événement ${eventName} émis pour le chat ${chatId}`);
+      console.log('⌨️ [Socket] Événement typing émis');
     } else {
       console.warn('⚠️ [Socket] Impossible d\'envoyer le statut de frappe: socket non connecté');
     }
@@ -246,41 +243,10 @@ class SocketService {
   }
 
   onTypingStatus(callback: (data: any) => void): void {
-    // Écoute l'événement "user-typing" (quand un utilisateur commence à taper)
-    this.socket?.on('user-typing', (data) => {
-      console.log('⌨️ [Socket] Événement user-typing reçu:', data);
-      // Formater les données pour notre interface
-      const typingData = {
-        userId: data.userId || 'unknown',
-        username: this.getUsernameFromUserId(data.userId) || 'Quelqu\'un',
-        isTyping: true,
-        chatId: data.chatId
-      };
-      console.log('⌨️ [Socket] Utilisateur commence à taper:', typingData);
-      callback(typingData);
+    this.socket?.on('typing-status', (data) => {
+      console.log('⌨️ [Socket] Statut de frappe reçu:', data);
+      callback(data);
     });
-    
-    // Écoute l'événement "user-stopped-typing" (quand un utilisateur arrête de taper)
-    this.socket?.on('user-stopped-typing', (data) => {
-      console.log('⌨️ [Socket] Événement user-stopped-typing reçu:', data);
-      // Formater les données pour notre interface
-      const typingData = {
-        userId: data.userId || 'unknown',
-        username: this.getUsernameFromUserId(data.userId) || 'Quelqu\'un',
-        isTyping: false,
-        chatId: data.chatId
-      };
-      console.log('⌨️ [Socket] Utilisateur arrête de taper:', typingData);
-      callback(typingData);
-    });
-  }
-  
-  // Méthode utilitaire pour obtenir le nom d'utilisateur à partir de l'ID
-  // Cette méthode sera améliorée ultérieurement pour récupérer les noms d'utilisateur
-  private getUsernameFromUserId(userId: string): string | null {
-    console.warn('⚠️ [Socket] getUsernameFromUserId non implémentée, retourne null pour l\'instant', userId);
-    // Pour l'instant, retourne null et notre code utilisera 'Quelqu\'un' comme valeur par défaut
-    return null;
   }
 
   onError(callback: (error: any) => void): void {
@@ -310,8 +276,7 @@ class SocketService {
   }
 
   offTypingStatus(): void {
-    this.socket?.off('user-typing');
-    this.socket?.off('user-stopped-typing');
+    this.socket?.off('typing-status');
   }
 
   offError(): void {

@@ -7,11 +7,13 @@ export function useSession() {
     const [user ,setUser] = useState<User|null>(null);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(true)
+    const [token, setToken] = useState<string|null>(null);
 
     useEffect(()=>{
         getSession()
         .then((data)=>{
             setUser(data?.data);
+            setToken(data?.token||"");  
         })
         .catch((error)=>{
             console.log({ error })
@@ -23,6 +25,7 @@ export function useSession() {
     return {
         isLoading,
         error,
-        user
+        user,
+        token
     }
 }

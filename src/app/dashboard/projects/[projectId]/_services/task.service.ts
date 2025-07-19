@@ -29,8 +29,8 @@ export async function createTask(formData: FormData, projectId: string, workspac
     };
 
     try {
-    
-        const res = await api.post(`/tasks/projects/${projectId}/tasks`, nouvelleTache);
+
+        const res = await api.post(`/tasks/workspaces/${workspaceId}/projects/${projectId}/tasks`, nouvelleTache);
         console.log({res: res.data})
 
         if (res.status === 201) {
@@ -40,11 +40,11 @@ export async function createTask(formData: FormData, projectId: string, workspac
                 data: nouvelleTache,
             };
         } else {
-            return {
-                success: false,
-                message: "Erreur lors de la création de la tâche.",
-            };
-        }
+        return {
+            success: false,
+            message: res.data.error || "Erreur lors de la création de la tâche.",
+        };
+    }
     } catch {
         return {
             success: false,
@@ -147,7 +147,7 @@ export async function getAllTasks(projectId: string): Promise<APIResponse> {
             message: "Les tâches ont été récupérées avec succès.",
             data: res.data.data,
         };
-    } else {
+    }  else{
         return {
             success: false,
             message: "Erreur lors de la récupération des tâches.",

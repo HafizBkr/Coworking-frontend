@@ -21,6 +21,9 @@ import { useWorkspaces } from "../_hooks/use-workspaces";
 import { WorkspaceDialog } from "./workspace-dialog";
 import { useWorkspaceStore } from "@/stores/workspace.store";
 import { useChatIdStore } from "@/stores/chat-id.store";
+import { useProjectStore } from "@/stores/project.store";
+import { useRouter } from "next/navigation";
+import { routes } from "@/config/routes";
 
 
 export function WorkSpaceSwitcher() {
@@ -28,7 +31,9 @@ export function WorkSpaceSwitcher() {
   const { setCurrentWorkspace, currentWorkspace } = useWorkspaceStore();
   const { workspaces,error, isLoading }= useWorkspaces();
   const [openDialog, setOpenDialog] = React.useState(false);
-  const { clearChatId } = useChatIdStore()
+  const { clearChatId } = useChatIdStore();
+  const { clearCurrentProject } = useProjectStore();
+  const router = useRouter();
 
   // if(!workspaces?.[0]){
   //   return null
@@ -83,8 +88,10 @@ export function WorkSpaceSwitcher() {
               <DropdownMenuItem
                 key={workspace.name}
                 onClick={() => {
-                  clearChatId()
+                  clearChatId();
+                  clearCurrentProject();
                   setCurrentWorkspace(workspace);
+                  router.push(routes.dashboard.home);
                 }}
                 className="gap-2 p-2"
               >

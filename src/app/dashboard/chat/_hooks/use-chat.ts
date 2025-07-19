@@ -41,7 +41,6 @@ export function useChat() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [totalMessagesLoaded, setTotalMessagesLoaded] = useState(0);
-  // Nombre de messages à charger par lot
   const MESSAGES_LIMIT = 10;
   
   // Effacer le typingTimeout quand le composant est démonté
@@ -73,68 +72,43 @@ export function useChat() {
     
     console.log('[Chat] Chargement des messages pour chatId:', chatId);
     try {
-      // Récupérer tous les messages du serveur, indépendamment des paramètres
-      const response = await getChatMessages(chatId);
+      const oldestMessageId = loadMore && messages.length > 0 
+        ? messages[0]._id 
+        : undefined;
+      
+      console.log('[Chat] Chargement des messages avec:', {
+        chatId,
+        limit: MESSAGES_LIMIT,
+        before: oldestMessageId,
+        loadMore
+      });
+      
+      const response = await getChatMessages(
+        chatId, 
+        MESSAGES_LIMIT, 
+        oldestMessageId
+      );
       
       if (response.success && response.data) {
-        const allMessages = response.data as ChatMessage[];
-        console.log(`[Chat] ${allMessages.length} messages chargés au total du serveur`);
+        const newMessages = response.data as ChatMessage[];
+        console.log(`[Chat] ${newMessages.length} messages chargés`);
         
-        // Trier les messages par date (du plus ancien au plus récent)
-        const sortedMessages = [...allMessages].sort((a, b) => 
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
+        // Si aucun message ou moins de messages que la limite demandée, il n'y en a plus à charger
+        setHasMoreMessages(newMessages.length > 0 && newMessages.length >= MESSAGES_LIMIT);
         
         if (loadMore) {
-          // Si on charge plus de messages, on ajoute les 10 messages plus anciens
-          // que ceux déjà affichés, si disponibles
-          const currentFirstMessage = messages[0];
-          let currentIndex = -1;
-          
-          if (currentFirstMessage) {
-            currentIndex = sortedMessages.findIndex(msg => msg._id === currentFirstMessage._id);
-          }
-          
-          // S'il n'y a pas de message actuellement ou si on n'a pas trouvé le premier message actuel
-          if (currentIndex === -1) {
-            currentIndex = sortedMessages.length;
-          }
-          
-          // Calculer le début de la nouvelle tranche (10 messages avant les messages actuels)
-          const startIndex = Math.max(0, currentIndex - MESSAGES_LIMIT);
-          
-          // Extraire les nouveaux messages à ajouter (entre startIndex et currentIndex)
-          const newMessagesToAdd = sortedMessages.slice(startIndex, currentIndex);
-          
-          // Définir s'il reste des messages à charger
-          setHasMoreMessages(startIndex > 0);
-          
           // Ajouter les nouveaux messages au début de la liste existante
           setMessages(prev => {
-            const combinedMessages = [...newMessagesToAdd, ...prev];
-            // Mettre à jour le compteur
+            const combinedMessages = [...newMessages, ...prev];
+            // Mettre à jour le compteur total uniquement quand on charge plus de messages
             setTotalMessagesLoaded(combinedMessages.length);
             return combinedMessages;
           });
-          
-          console.log(`[Chat] ${newMessagesToAdd.length} messages plus anciens ajoutés`);
         } else {
-          // Pour le chargement initial, prendre seulement les 10 derniers messages
-          const messagesToShow = sortedMessages.slice(
-            Math.max(0, sortedMessages.length - MESSAGES_LIMIT), 
-            sortedMessages.length
-          );
-          
-          // Définir s'il reste des messages à charger
-          setHasMoreMessages(sortedMessages.length > MESSAGES_LIMIT);
-          
-          // Mettre à jour l'état avec les 10 derniers messages
-          setMessages(messagesToShow);
-          
-          // Réinitialiser le compteur
-          setTotalMessagesLoaded(messagesToShow.length);
-          
-          console.log(`[Chat] ${messagesToShow.length} derniers messages chargés pour l'affichage initial`);
+          // Remplacer tous les messages pour le chargement initial
+          setMessages(newMessages);
+          // Réinitialiser le compteur au nombre initial de messages chargés
+          setTotalMessagesLoaded(newMessages.length);
         }
       }
     } catch {
@@ -219,22 +193,12 @@ export function useChat() {
       });
       
       socketService.onTypingStatus((data) => {
-        console.log('[Chat] Événement de frappe reçu:', data);
-        
-        // Ignorer les événements qui ne concernent pas le chat actuel
-        if (data.chatId !== chatId) {
-          console.log(`[Chat] Ignoré car cet événement concerne un autre chat (${data.chatId})`);
-          return;
-        }
+        console.log('[Chat] typing-status reçu:', data);
         
         // Ignore ses propres événements de frappe
-        if (currentUser && data.userId === currentUser.id) {
-          console.log('[Chat] Ignoré car c\'est mon propre événement de frappe');
-          return;
-        }
+        if (currentUser && data.userId === currentUser.id) return;
         
         if (data.isTyping) {
-          console.log(`[Chat] ${data.username} est en train d'écrire...`);
           // Ajouter l'utilisateur à la liste de ceux qui écrivent
           setTypingUsers(prev => {
             if (!prev.some(user => user.userId === data.userId)) {
@@ -245,11 +209,9 @@ export function useChat() {
           
           // Supprimer l'utilisateur après 3 secondes s'il n'y a pas d'autre événement
           setTimeout(() => {
-            console.log(`[Chat] Fin automatique du typing pour ${data.username} après 3 secondes`);
             setTypingUsers(prev => prev.filter(user => user.userId !== data.userId));
           }, 3000);
         } else {
-          console.log(`[Chat] ${data.username} a arrêté d'écrire`);
           // Supprimer immédiatement l'utilisateur de la liste
           setTypingUsers(prev => prev.filter(user => user.userId !== data.userId));
         }
@@ -316,22 +278,17 @@ export function useChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
   
-  // Scroll to bottom lorsque de nouveaux messages sont ajoutés ou quand quelqu'un commence à taper
+  // Scroll to bottom lorsque de nouveaux messages sont ajoutés, mais pas lors du chargement des messages plus anciens
   useEffect(() => {
     // Ne pas scroller si on charge d'anciens messages (isLoadingMore)
     if (!isLoadingMore) {
       scrollToBottom();
     }
-  }, [messages, typingUsers, scrollToBottom, isLoadingMore]);
+  }, [messages, scrollToBottom, isLoadingMore]);
 
   // Fonction pour gérer la saisie de l'utilisateur (typing)
   const handleTyping = useCallback((isTyping: boolean) => {
-    if (!chatId || !currentUser || !isConnected) {
-      console.log('[Chat] Impossible d\'envoyer le statut de frappe:', { chatId, currentUser: !!currentUser, isConnected });
-      return;
-    }
-    
-    console.log(`[Chat] Envoi du statut de frappe: ${isTyping ? 'commence à taper' : 'arrête de taper'}`);
+    if (!chatId || !currentUser || !isConnected) return;
     
     // Si l'utilisateur commence à taper, envoyer immédiatement l'événement
     if (isTyping) {
@@ -344,7 +301,6 @@ export function useChat() {
       
       // Définir un nouveau timeout pour arrêter le statut de frappe après 3 secondes
       typingTimeoutRef.current = setTimeout(() => {
-        console.log('[Chat] Fin automatique du typing après 3 secondes d\'inactivité');
         socketService.sendTyping(chatId, false);
       }, 3000);
     } else {

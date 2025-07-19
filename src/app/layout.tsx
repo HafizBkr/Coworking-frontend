@@ -4,6 +4,7 @@ import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "sonner";
+import { SessionProvider } from "@/context/SessionContext";
 
 const nunito_sans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -26,15 +27,17 @@ export default function RootLayout({
       <body
         className={`${nunito_sans.className} antialiased h-full`}
       >
-      <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster richColors expand closeButton/>
+      <SessionProvider>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster richColors expand closeButton/>
         </ThemeProvider>
+      </SessionProvider>
       </body>
     </html>
   );

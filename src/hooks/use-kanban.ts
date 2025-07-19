@@ -1,10 +1,10 @@
-"use client"
-
+"use client";
 import { useState, useEffect, useOptimistic, useTransition } from "react"
 import { createTask, getAllTasks, updateTask } from "@/app/dashboard/projects/[projectId]/_services/task.service"
 import type { Task, Status } from "../types/kanban"
 import { useProjectStore } from "@/stores/project.store"
 import { useWorkspaceStore } from "@/stores/workspace.store"
+import { toast } from "sonner"
 
 export function useKanban() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -16,7 +16,6 @@ export function useKanban() {
   const [, startTransition] = useTransition();
   const projectId = currentProject?._id || "";
   const workspaceId = currentWorkspace?._id || "";
-
   // Optimistic state pour les tâches
   const [optimisticTasks, setOptimisticTasks] = useOptimistic<Task[]>(tasks)
 
@@ -36,7 +35,8 @@ export function useKanban() {
             setOptimisticTasks(taskData)
           })
         } else {
-          setError(res.message ?? "Erreur inconnue")
+          toast.error(res.message || "Erreur inconnue")
+          setError(res.message || "Erreur inconnue")
         }
       } catch {
         setError("Erreur lors du chargement des tâches.")
@@ -74,6 +74,7 @@ export function useKanban() {
         setLoading(false)
         return true
       } else {
+        toast.error(res.message || "Erreur inconnue")
         setError(res.message ?? "Erreur inconnue")
         // Conserver l'ancienne valeur en cas d'erreur
         startTransition(() => {

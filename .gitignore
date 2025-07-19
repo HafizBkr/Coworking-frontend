@@ -19,6 +19,7 @@
 
 # production
 /build
+/Viso_CoW_Bckend_Go_service-main
 
 # misc
 .DS_Store

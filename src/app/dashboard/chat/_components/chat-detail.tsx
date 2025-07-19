@@ -10,7 +10,6 @@ import { useChat, type ChatMessage } from '../_hooks/use-chat';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useChatIdStore } from '@/stores/chat-id.store';
-import { useChatUsernameStore } from '@/stores/chat-username.store';
 
 export function ChatDetailComponent() {
   const { chatId } = useChatIdStore();
@@ -70,10 +69,8 @@ export function ChatDetailComponent() {
     
     // Déclencher l'événement typing seulement si la valeur change et n'est pas vide
     if (newValue.trim() !== '') {
-      console.log('[ChatDetail] L\'utilisateur commence à taper');
       handleTyping(true);
     } else {
-      console.log('[ChatDetail] L\'utilisateur arrête de taper (champ vide)');
       handleTyping(false);
     }
   };
@@ -84,7 +81,7 @@ export function ChatDetailComponent() {
   }
 
   return (
-    <div className='col-span-2 bg-background flex flex-col relative rounded-lg px-2 h-[calc(100svh-6.5rem)] '>
+    <div className='col-span-2 border bg-background flex flex-col relative rounded-lg px-2 h-[calc(100svh-6rem)] '>
         <ChatHeader 
           isConnected={isConnected}
           onReconnect={handleReconnect}
@@ -118,7 +115,7 @@ export function ChatDetailComponent() {
 
 export function ChatPlaceholder() {
     return (
-        <div className='flex col-span-2 bg-background rounded-lg flex-col border overflow-hidden  h-[calc(100svh-7rem)] w-full items-center justify-center'>
+        <div className='flex col-span-2 bg-background rounded-lg flex-col border overflow-hidden flex-1 h-[calc(100svh-6rem)] w-full items-center justify-center'>
             <Image src='/icons/chat.svg' alt='chat-detail' width={250} height={250} />
             <h1 className='text-xl font-semibold text-muted-foreground text-center'>Discutez avec les membres de <br /> votre équipe</h1>
         </div>
@@ -132,18 +129,15 @@ interface ChatHeaderProps {
 }
 
 export function ChatHeader({ isConnected, onReconnect, reconnecting }: ChatHeaderProps) {
-  const { username } = useChatUsernameStore();
-  const { chatId, clearChatId } = useChatIdStore();
-    const avatar = createAvatar(glass, {
-      seed: chatId || username || 'general-chat'
-    });
-    const svg = avatar.toDataUri();
+    const avatar = createAvatar(glass);
+    const svg = avatar.toDataUri()
+    const { clearChatId } = useChatIdStore();
     return (
         <div className='flex items-center p-2 h-16 shrink-0 sticky top-0 z-10 bg-background justify-between border-b'>
             <div className='flex items-center gap-2'>
                 <Image src={svg} alt='chat-detail' width={30} height={30} className='rounded-full' />
                 <div>
-                  <h1 className='text-sm font-semibold'>{username}</h1>
+                  <h1 className='text-sm font-semibold'>Chat Général</h1>
                   <div className='flex items-center gap-1'>
                     {isConnected ? (
                       <>
@@ -171,10 +165,10 @@ export function ChatHeader({ isConnected, onReconnect, reconnecting }: ChatHeade
             <div className='flex items-center gap-2'>
                 <Button 
                 onClick={() => clearChatId()}
-                size="icon"
+                size={"icon"}
                 className='rounded-full'
-                variant="ghost">
-                    <XIcon className="h-4 w-4" />
+                variant={'ghost'}>
+                    <XIcon/>
                 </Button>
             </div>
         </div>
@@ -193,7 +187,7 @@ interface ChatContentProps {
   loadMoreMessages: () => void;
   hasMoreMessages: boolean;
   isLoadingMore: boolean;
-  totalMessagesLoaded: number;
+  totalMessagesLoaded?: number;
 }
 
 export function ChatContent({ 
@@ -210,13 +204,6 @@ export function ChatContent({
   isLoadingMore,
   totalMessagesLoaded = 0
 }: ChatContentProps) {
-  
-  // Assurer que l'indicateur de frappe est visible en faisant défiler vers le bas quand il apparaît
-  React.useEffect(() => {
-    if (typingUsers.length > 0 && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [typingUsers]);
     if (isLoading) {
       return (
         <div className='flex flex-col p-4 h-full items-center justify-center'>
@@ -245,11 +232,11 @@ export function ChatContent({
     }
 
     return (
-        <div className='flex px-4 flex-col overflow-y-auto h-full relative'>
+        <div className='flex flex-col p-4 overflow-y-auto border h-full relative'>
             {/* En-tête avec le compteur et le bouton de chargement des messages précédents */}
-            <div className='flex flex-col backdrop-blur-sm items-center mb-4 sticky top-0 z-10 bg-background/80 py-2 w-full'>
+            <div className='flex flex-col items-center mb-4'>
               {/* Informations sur les messages chargés */}
-              <div className='flex flex-col items-center gap-1'>
+              <div className='flex flex-col items-center mb-2 gap-1'>
                 {messages.length > 0 && (
                   <div className='text-xs text-muted-foreground'>
                     {totalMessagesLoaded} message{totalMessagesLoaded > 1 ? 's' : ''} chargé{totalMessagesLoaded > 1 ? 's' : ''}
@@ -292,15 +279,15 @@ export function ChatContent({
               ))
             )}
             
-            {/* Indicateur de frappe - placé juste au-dessus de la référence de fin des messages */}
+            {/* Indicateur de frappe */}
             {typingUsers.length > 0 && (
-              <div className='flex items-center gap-2 mt-2 mb-3 bg-gray-100 rounded-full py-1 px-3 w-fit mx-auto'>
+              <div className='flex items-center gap-2 mt-2 mb-1'>
                 <div className='flex space-x-1'>
-                  <div className='w-2 h-2 bg-primary rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
-                  <div className='w-2 h-2 bg-primary rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
-                  <div className='w-2 h-2 bg-primary rounded-full animate-bounce' style={{ animationDelay: '600ms' }} />
+                  <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce' style={{ animationDelay: '0ms' }} />
+                  <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce' style={{ animationDelay: '300ms' }} />
+                  <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce' style={{ animationDelay: '600ms' }} />
                 </div>
-                <span className='text-xs text-gray-600 font-medium'>
+                <span className='text-xs text-gray-500'>
                   {typingUsers.length === 1 
                     ? `${typingUsers[0].username || 'Quelqu\'un'} est en train d'écrire...` 
                     : `${typingUsers.length} personnes sont en train d'écrire...`}
@@ -331,7 +318,7 @@ export function ChatMessage({ message, currentUser }: ChatMessageProps) {
     return (
         <div className={`flex gap-3 mb-4 ${isMine ? 'justify-end' : 'justify-start'}`}>
             {!isMine && (
-              <div className='shrink-0 h-8 w-8 rounded-full overflow-hidden'>
+              <div className='shrink-0 size-8 rounded-full overflow-hidden'>
                 <Image 
                   src={svg} 
                   alt={message.sender.username} 
@@ -346,12 +333,12 @@ export function ChatMessage({ message, currentUser }: ChatMessageProps) {
                     <span className='text-sm font-medium'>{message.sender.username}</span>
                     <span className='text-xs text-muted-foreground'>{formattedTime}</span>
                 </div>
-                <div className={`${isMine ? 'bg-primary text-white' : 'bg-secondary'} rounded-lg p-3 max-w-[80%]`}>
+                <div className={`${isMine ? 'bg-primary text-white' : 'bg-gray-100'} rounded-lg p-3 max-w-[80%]`}>
                     <p className='text-sm whitespace-pre-wrap break-words'>{message.content}</p>
                 </div>
             </div>
             {isMine && (
-              <div className='shrink-0 h-8 w-8 rounded-full overflow-hidden'>
+              <div className='shrink-0 size-8 rounded-full overflow-hidden'>
                 <Image 
                   src={svg} 
                   alt={message.sender.username} 
@@ -383,7 +370,7 @@ export function ChatFooter({
   disabled 
 }: ChatFooterProps) {
     return (
-        <div className='flex items-center sticky bottom-0 p-4 border-t bg-background z-10'>
+        <div className='flex items-center sticky bottom-0 p-4 border-t bg-background'>
             <ChatInput 
               value={messageInput}
               onChange={setMessageInput}
@@ -425,10 +412,10 @@ export function ChatInput({
                 disabled={disabled}
             />
             <Button 
-                size="icon" 
+                size={'icon'} 
                 onClick={onSendMessage}
                 disabled={!value.trim() || !isConnected || disabled}
-                className={!value.trim() || !isConnected ? 'opacity-50' : ''}
+                className={`${!value.trim() || !isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 <SendIcon className='h-4 w-4' />
             </Button>

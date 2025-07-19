@@ -11,6 +11,9 @@ import { signIn } from '../_services/signin.service'
 import { toast } from 'sonner'
 import { redirect } from 'next/navigation'
 import { FieldError } from '@/components/customs/field-error'
+import { useWorkspaceStore } from '@/stores/workspace.store';
+import { useChatIdStore } from '@/stores/chat-id.store';
+import { useProjectStore } from '@/stores/project.store';
 
 const pacifico = Pacifico({
   weight:["400"],
@@ -20,6 +23,10 @@ const pacifico = Pacifico({
 export function SigninForm() {
   const [isPending, startTransition] = useTransition();
   const [errors, setErrors] = useState<{[key: string]: string[] | undefined}>({});
+  const { clearCurrentWorkspace } = useWorkspaceStore();
+  const { clearChatId } = useChatIdStore();
+  const { clearCurrentProject } = useProjectStore();
+  
   async function handleSignIn(formData:FormData){
     startTransition(async () =>{
       const response = await signIn(formData);
@@ -35,6 +42,9 @@ export function SigninForm() {
 
       
       if(response.success){
+        clearCurrentWorkspace();
+        clearChatId();
+        clearCurrentProject();
         redirect(routes.dashboard.home)
       }
 
