@@ -1,26 +1,26 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useVideoConference } from '../_hooks/use-video-conference';
-import { useSessionContext } from '@/context/SessionContext';
-import { 
-  Mic, 
-  MicOff, 
-  Video, 
-  VideoOff, 
-  Monitor, 
-  MonitorOff, 
-  Send, 
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useVideoConference } from "../_hooks/use-video-conference";
+import { useSessionContext } from "@/context/SessionContext";
+import {
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Monitor,
+  MonitorOff,
+  Send,
   Users,
   MessageSquare,
   Phone,
-  PhoneOff
-} from 'lucide-react';
+  PhoneOff,
+} from "lucide-react";
 
 export function VisioRoom() {
   const session = useSessionContext();
@@ -35,12 +35,12 @@ export function VisioRoom() {
     toggleVideo,
     toggleScreenShare,
     sendChatMessage,
-    connect
+    connect,
   } = useVideoConference();
 
   const [message, setMessage] = useState("");
 
-  const currentUser = participants.find(p => p.userID === session?.user?.id);
+  const currentUser = participants.find((p) => p.userID === session?.user?.id);
   const isCurrentUserMuted = currentUser?.audioMuted || false;
   const isCurrentUserVideoOff = currentUser?.videoOff || false;
   const isCurrentUserScreenSharing = currentUser?.screenSharing || false;
@@ -52,15 +52,15 @@ export function VisioRoom() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
   const handleLeaveRoom = () => {
-    if (confirm('Voulez-vous vraiment quitter la salle ?')) {
-      window.location.href = '/dashboard/meet';
+    if (confirm("Voulez-vous vraiment quitter la salle ?")) {
+      window.location.href = "/dashboard/meet";
     }
   };
 
@@ -74,7 +74,7 @@ export function VisioRoom() {
           </div>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button onClick={connect} disabled={isConnecting}>
-            {isConnecting ? 'Reconnexion...' : 'Réessayer'}
+            {isConnecting ? "Reconnexion..." : "Réessayer"}
           </Button>
         </CardContent>
       </Card>
@@ -89,13 +89,19 @@ export function VisioRoom() {
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               <Phone className="h-5 w-5 text-green-500" />
-              <h2 className="text-lg font-semibold">Salle de visioconférence</h2>
+              <h2 className="text-lg font-semibold">
+                Salle de visioconférence
+              </h2>
             </div>
             <Badge variant={isConnected ? "default" : "secondary"}>
-              {isConnected ? "Connecté" : isConnecting ? "Connexion..." : "Déconnecté"}
+              {isConnected
+                ? "Connecté"
+                : isConnecting
+                  ? "Connexion..."
+                  : "Déconnecté"}
             </Badge>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {actualRoomId && (
               <Badge variant="outline" className="font-mono text-xs">
@@ -142,7 +148,10 @@ export function VisioRoom() {
                             <p className="font-medium">
                               {participant.username}
                               {participant.userID === session?.user?.id && (
-                                <Badge variant="secondary" className="ml-2 text-xs">
+                                <Badge
+                                  variant="secondary"
+                                  className="ml-2 text-xs"
+                                >
                                   Vous
                                 </Badge>
                               )}
@@ -152,7 +161,7 @@ export function VisioRoom() {
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-2">
                           {participant.audioMuted && (
                             <Badge variant="destructive" className="text-xs">
@@ -202,18 +211,22 @@ export function VisioRoom() {
                     chat.map((msg, index) => (
                       <div key={index} className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <span className="font-medium text-sm">{msg.user}</span>
+                          <span className="font-medium text-sm">
+                            {msg.user}
+                          </span>
                           <span className="text-xs text-muted-foreground">
                             {msg.timestamp.toLocaleTimeString()}
                           </span>
                         </div>
-                        <p className="text-sm bg-muted p-2 rounded">{msg.message}</p>
+                        <p className="text-sm bg-muted p-2 rounded">
+                          {msg.message}
+                        </p>
                       </div>
                     ))
                   )}
                 </div>
               </ScrollArea>
-              
+
               <div className="flex space-x-2">
                 <Input
                   value={message}
@@ -244,36 +257,44 @@ export function VisioRoom() {
             onClick={toggleMute}
             disabled={!isConnected}
           >
-            {isCurrentUserMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+            {isCurrentUserMuted ? (
+              <MicOff className="h-5 w-5" />
+            ) : (
+              <Mic className="h-5 w-5" />
+            )}
           </Button>
-          
+
           <Button
             variant={isCurrentUserVideoOff ? "destructive" : "outline"}
             size="lg"
             onClick={toggleVideo}
             disabled={!isConnected}
           >
-            {isCurrentUserVideoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+            {isCurrentUserVideoOff ? (
+              <VideoOff className="h-5 w-5" />
+            ) : (
+              <Video className="h-5 w-5" />
+            )}
           </Button>
-          
+
           <Button
             variant={isCurrentUserScreenSharing ? "default" : "outline"}
             size="lg"
             onClick={toggleScreenShare}
             disabled={!isConnected}
           >
-            {isCurrentUserScreenSharing ? <MonitorOff className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
+            {isCurrentUserScreenSharing ? (
+              <MonitorOff className="h-5 w-5" />
+            ) : (
+              <Monitor className="h-5 w-5" />
+            )}
           </Button>
-          
-          <Button
-            variant="destructive"
-            size="lg"
-            onClick={handleLeaveRoom}
-          >
+
+          <Button variant="destructive" size="lg" onClick={handleLeaveRoom}>
             <PhoneOff className="h-5 w-5" />
           </Button>
         </div>
       </div>
     </div>
   );
-} 
+}

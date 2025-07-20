@@ -1,27 +1,27 @@
 "use client";
 
-import React from 'react';
-import { VisioRoom } from '../_components/visio-room';
+import React from "react";
+import { VisioRoom } from "../_components/visio-room";
 // import { CreateMeetButton } from '../_components/create-meet-button';
 // import { ConnectionDiagnostics } from '../_components/connection-diagnostics';
 // import { WebSocketTest } from '../_components/websocket-test';
 // import { DebugWorkspace } from '../_components/debug-workspace';
 // import { WorkspaceInfo } from '../_components/workspace-info';
 // import { RoomInfo } from '../_components/room-info';
-import { TokenDiagnostics } from '../_components/token-diagnostics';
-import { SimpleTokenTest } from '../_components/simple-token-test';
-import { WebSocketAuthTest } from '../_components/websocket-auth-test';
-import { ApiDebugTest } from '../_components/api-debug-test';
-import { DirectApiTest } from '../_components/direct-api-test';
+import { TokenDiagnostics } from "../_components/token-diagnostics";
+import { SimpleTokenTest } from "../_components/simple-token-test";
+import { WebSocketAuthTest } from "../_components/websocket-auth-test";
+import { ApiDebugTest } from "../_components/api-debug-test";
+import { DirectApiTest } from "../_components/direct-api-test";
 
 export default function MeetPage() {
   return (
     <div className="container overflow-y-auto mx-auto p-4 space-y-6">
+      {/* Affiche le titre seulement */}
       <h1 className="text-2xl font-bold">Test Visioconférence</h1>
-      
-      {/* Diagnostic du Token - PRIORITÉ */}
+
+      {/* Diagnostic du Token - affichage conditionnel d'une erreur */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-orange-600">🔍 Diagnostic du Token (Problème Access denied)</h2>
         <TokenDiagnostics />
         <SimpleTokenTest />
         <ApiDebugTest />
@@ -35,7 +35,7 @@ export default function MeetPage() {
           <DebugWorkspace />
           <WorkspaceInfo />
         </div>
-        
+
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Informations Room</h2>
           <RoomInfo />
@@ -47,7 +47,7 @@ export default function MeetPage() {
           <h2 className="text-lg font-semibold">Créer une salle</h2>
           <CreateMeetButton />
         </div> */}
-        
+
         {/* <div className="space-y-4">
           <h2 className="text-lg font-semibold">Diagnostic Connexion</h2>
           <ConnectionDiagnostics />
@@ -55,7 +55,9 @@ export default function MeetPage() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Test WebSocket avec Authentification</h2>
+        <h2 className="text-lg font-semibold">
+          Test WebSocket avec Authentification
+        </h2>
         <WebSocketAuthTest />
       </div>
 
