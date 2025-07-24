@@ -22,7 +22,7 @@ import { WorkspaceDialog } from "./workspace-dialog";
 import { useWorkspaceStore } from "@/stores/workspace.store";
 import { useChatIdStore } from "@/stores/chat-id.store";
 import { useProjectStore } from "@/stores/project.store";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { routes } from "@/config/routes";
 
 
@@ -34,16 +34,8 @@ export function WorkSpaceSwitcher() {
   const { clearChatId } = useChatIdStore();
   const { clearCurrentProject } = useProjectStore();
   const router = useRouter();
-
-  // if(!workspaces?.[0]){
-  //   return null
-  // }
-
-  // if (!ActiveWorkspace) {
-  //   return null
-  // }
-
-
+  const pathname = usePathname();
+  const isChatRoute = pathname === routes.dashboard.chat
 
   return (
     <>
@@ -91,6 +83,7 @@ export function WorkSpaceSwitcher() {
                   clearChatId();
                   clearCurrentProject();
                   setCurrentWorkspace(workspace);
+                  if(isChatRoute) return
                   router.push(routes.dashboard.home);
                 }}
                 className="gap-2 p-2"

@@ -8,7 +8,7 @@ import { AddTaskDialog } from "./add-task-dialog"
 import type { NewTaskForm } from "@/types/kanban"
 
 export function KanbanDashboard() {
-  const { getTasksByStatus,searchTerm,addTask, setSearchTerm , moveTask, deleteTask, assignTask, loading } = useKanban()
+  const { getTasksByStatus,searchTerm,addTask, setSearchTerm , moveTask, deleteTask, loading } = useKanban()
   // Fonction d'adaptation pour AddTaskDialog
   const handleAddTask = async (task: NewTaskForm) => {
     const formData = new FormData();
@@ -30,9 +30,15 @@ export function KanbanDashboard() {
           <AddTaskDialog onAddTask={handleAddTask} />
         </div>
         {/* Kanban Board */}
-        <KanbanBoard loading={loading} getTasksByStatus={getTasksByStatus} onMoveTask={moveTask} onDeleteTask={deleteTask} onAssignTask={assignTask} />
+        <KanbanBoard 
+        loading={loading} 
+        getTasksByStatus={getTasksByStatus} 
+        onMoveTask={moveTask} 
+        onDeleteTask={deleteTask} 
+        // onAssignTask={assignTask} 
+        />
         {/* Stats */}
-
+    
       </div>
   )
 }

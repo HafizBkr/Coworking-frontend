@@ -21,7 +21,6 @@ export default function Error({
       <div>
         <h2 className='text-2xl font-bold text-center'>Une erreur s&apos;est produite !</h2>
       </div>
-      <p className='text-muted-foreground'>{error.message}</p>
       <Button
         onClick={
           // Attempt to recover by trying to re-render the segment

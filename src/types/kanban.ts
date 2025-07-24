@@ -6,10 +6,9 @@ export interface Task {
   title: string
   description: string
   priority: Priority
-  assignee: {
-    name: string
+  assignedTo?: {
+    username: string
     avatar: string
-    initials: string
   }
   dueDate: string
   status: Status

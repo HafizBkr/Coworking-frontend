@@ -104,24 +104,35 @@ export function useKanban() {
       const res = await updateTask(newStatus, taskId)
       console.log({res: res})
       if (res.success) {
+        // Mettre à jour l'état réel des tâches
         setTasks((prev) => prev.map((task) => (task._id === taskId ? { ...task, status: newStatus } : task)))
+        // Rafraîchir également l'état optimiste pour assurer la synchronisation
+        startTransition(() => {
+          setOptimisticTasks((prev) => prev.map((task) => (task._id === taskId ? { ...task, status: newStatus } : task)))
+        })
         setLoading(false)
         return true
       } else {
         setError(res.message ?? "Erreur inconnue")
+        toast.error(res.message || "Erreur lors du déplacement de la tâche.")
         // Rollback si erreur en utilisant la valeur précédente
         startTransition(() => {
           setOptimisticTasks(previousTasks)
         })
+        setLoading(false)
+        return false
       }
-    } catch {
+    } catch (error) {
+      console.error("Erreur moveTask:", error)
       setError("Erreur lors du déplacement de la tâche.")
+      toast.error("Erreur lors du déplacement de la tâche.")
       // Rollback si erreur en utilisant la valeur précédente
       startTransition(() => {
         setOptimisticTasks(previousTasks)
       })
+      setLoading(false)
+      return false
     }
-    setLoading(false)
   }
 
   const deleteTask = (taskId: string) => {
@@ -142,31 +153,31 @@ export function useKanban() {
     }
   }
 
-  const assignTask = (taskId: string, assigneeName: string) => {
-    // Stocker la valeur actuelle avant la mise à jour
-    const previousTasks = [...tasks];
+  // const assignTask = (taskId: string, assigneeName: string) => {
+  //   // Stocker la valeur actuelle avant la mise à jour
+  //   const previousTasks = [...tasks];
     
-    try {
-      setTasks(tasks.map((task) =>
-        task._id === taskId
-          ? { ...task, assignee: { ...task.assignee, name: assigneeName } }
-          : task
-      ));
-      // Utiliser startTransition pour les mises à jour optimistes
-      startTransition(() => {
-        setOptimisticTasks(optimisticTasks.map((task) =>
-          task._id === taskId
-            ? { ...task, assignee: { ...task.assignee, name: assigneeName } }
-            : task
-        ));
-      })
-    } catch  {
-      // Conserver l'ancienne valeur en cas d'erreur
-      startTransition(() => {
-        setOptimisticTasks(previousTasks)
-      })
-    }
-  };
+  //   try {
+  //     setTasks(tasks.map((task) =>
+  //       task._id === taskId
+  //         ? { ...task, assignee: { ...task.assignee, name: assigneeName } }
+  //         : task
+  //     ));
+  //     // Utiliser startTransition pour les mises à jour optimistes
+  //     startTransition(() => {
+  //       setOptimisticTasks(optimisticTasks.map((task) =>
+  //         task._id === taskId
+  //           ? { ...task, assignee: { ...task.assignee, name: assigneeName } }
+  //           : task
+  //       ));
+  //     })
+  //   } catch  {
+  //     // Conserver l'ancienne valeur en cas d'erreur
+  //     startTransition(() => {
+  //       setOptimisticTasks(previousTasks)
+  //     })
+  //   }
+  // };
 
 
   return {
@@ -178,7 +189,7 @@ export function useKanban() {
     addTask,
     moveTask,
     deleteTask,
-    assignTask,
+    // assignTask,
     loading,
     error,
 

@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>WebRTC Signaling Test</title>
+        <style>
+            video {
+                width: 300px;
+                margin: 10px;
+                background: #222;
+            }
+            #log {
+                white-space: pre;
+                background: #eee;
+                padding: 10px;
+                height: 200px;
+                overflow: auto;
+            }
+            button {
+                margin: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>WebRTC Signaling Test</h2>
+        <div>
+            Room ID: <input id="room" value="YOUR_ROOM_ID" size="40" /> Token:
+            <input id="token" value="YOUR_JWT_TOKEN" size="60" />
+            <button id="join">Join Room</button>
+        </div>
+        <div>
+            <video id="local" autoplay muted playsinline></video>
+            <video id="remote" autoplay playsinline></video>
+        </div>
+        <div>
+            <button id="toggleVideo">Activer/Désactiver Caméra</button>
+            <button id="toggleAudio">Activer/Désactiver Micro</button>
+        </div>
+        <div id="log"></div>
+        <script>
+            let ws, pc;
+            let localStream;
+            let videoEnabled = true;
+            let audioEnabled = true;
+            let remoteVideoEnabled = true;
+            let remoteAudioEnabled = true;
+            let makingOffer = false;
+            let polite = false; // Pour éviter les collisions d'offre
+            let ignoreOffer = false;
+            // PATCH: Buffer ICE candidates
+            let pendingCandidates = [];
+            let remoteDescSet = false;
+            let remoteUserId = null;
+            let keepAliveInterval = null;
+            const log = (msg) => {
+                document.getElementById("log").textContent += msg + "\n";
+            };
+
+            document.getElementById("join").onclick = async () => {
+                const room = document.getElementById("room").value;
+                const token = document.getElementById("token").value;
+                const wsUrl = `wss://visoconf-service-go.onrender.com/ws/room/${room}?token=${token}`;  
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = async () => {
+                    log("🔗 WebSocket connecté (index)");
+                    log("🔗 Room: " + room + " | Token: " + token.substring(0, 20) + "...");
+                    
+                    // Démarrer le keepalive
+                    if (keepAliveInterval) clearInterval(keepAliveInterval);
+                    keepAliveInterval = setInterval(() => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: "ping" }));
+                        }
+                    }, 30000); // Ping toutes les 30 secondes
+                    
+                    // Démarre la négociation ici !
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: true,
+                    });
+                    document.getElementById("local").srcObject = localStream;
+                    log("📹 Média local obtenu");
+                    // Log des pistes locales
+                    log("Pistes locales: " + localStream.getTracks().map(t => t.kind + ':' + t.enabled).join(', '));
+
+                    setupToggleButtons();
+
+                    await ensurePeerConnection();
+
+                    // Démarre la négociation si on est le premier (pas de pairs existants)
+                    ws.addEventListener("message", async function onPeers(event) {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === "existing_peers") {
+                            // Si on voit qu'il y a déjà quelqu'un, on est "polite"
+                            polite = msg.data.length > 0;
+                            log("👑 Mode poli: " + polite);
+                            // Récupère l'userID du peer distant (premier de la liste)
+                            if (msg.data.length > 0) {
+                                remoteUserId = msg.data[0].userID;
+                            }
+                        }
+                        if (msg.type === "existing_peers" && msg.data.length === 0) {
+                            log("👤 Room vide, en attente d'un participant...");
+                            // Ne pas créer d'offre maintenant - attendre qu'un peer arrive
+                            // L'offre sera créée via onnegotiationneeded quand un peer rejoint
+                            ws.removeEventListener("message", onPeers);
+                        }
+                    });
+                };
+                ws.onclose = () => {
+                    log("WebSocket fermé");
+                    if (keepAliveInterval) {
+                        clearInterval(keepAliveInterval);
+                        keepAliveInterval = null;
+                    }
+                };
+                ws.onerror = (e) => log("Erreur WebSocket: " + JSON.stringify(e));
+
+                ws.onmessage = async (event) => {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        log("📨 WS <- " + JSON.stringify(msg, null, 2));
+
+                        if (msg.type === "existing_peers") {
+                            // Si on voit qu'il y a déjà quelqu'un, on est "polite"
+                            polite = msg.data.length >  0;
+                            log("👑 Mode poli: " + polite);
+                        }
+
+                        // PATCH: Gestion SDP + ICE
+                        if (msg.type === "offer" || msg.type === "answer") {
+                            await ensurePeerConnection();
+                            const desc = new RTCSessionDescription(msg.data);
+
+                            const readyForOffer =
+                                !makingOffer &&
+                                (pc.signalingState === "stable" || ignoreOffer);
+
+                            ignoreOffer =
+                                !polite && msg.type === "offer" && !readyForOffer;
+                            if (ignoreOffer) {
+                                log("Offre ignorée (collision) - poli: " + polite + ", prêtPourOffre: " + readyForOffer + ", étatSignalisation: " + pc.signalingState);
+                                return;
+                            }
+
+                            try {
+                                await pc.setRemoteDescription(desc);
+                                remoteDescSet = true;
+                                // Ajoute tous les ICE candidates reçus en attente
+                                for (const c of pendingCandidates) {
+                                    try { await pc.addIceCandidate(c); } catch (e) { log("Erreur ajout ICE: " + e); }
+                                }
+                                pendingCandidates = [];
+                                if (msg.type === "offer") {
+                                    const answer = await pc.createAnswer();
+                                    await pc.setLocalDescription(answer);
+                                    ws.send(
+                                        JSON.stringify({
+                                            type: "answer",
+                                            data: pc.localDescription,
+                                            target: msg.from || remoteUserId
+                                        }),
+                                    );
+                                    log("Réponse envoyée");
+                                }
+                            } catch (e) {
+                                log("Erreur SDP: " + e);
+                            }
+                        }
+                        if (msg.type === "candidate") {
+                            await ensurePeerConnection();
+                            const candidate = new RTCIceCandidate(msg.data);
+                            if (remoteDescSet) {
+                                try {
+                                    await pc.addIceCandidate(candidate);
+                                } catch (e) {
+                                    log("Erreur ajout ICE: " + e);
+                                }
+                            } else {
+                                pendingCandidates.push(candidate);
+                            }
+                        }
+                        // Gestion de l'arrivée d'un nouveau participant
+                        if (msg.type === "peer_joined") {
+                            log("🆕 Nouveau participant rejoint: " + msg.from);
+                            if (!remoteUserId) {
+                                remoteUserId = msg.from;
+                                log("🎯 RemoteUserId défini: " + remoteUserId);
+                                // L'offre sera créée automatiquement via onnegotiationneeded
+                            }
+                        }
+
+                        // Gestion des commandes de flux distant
+                        if (msg.type === "remote-control") {
+                            if (msg.data.video !== undefined) {
+                                remoteVideoEnabled = msg.data.video;
+                                const remoteVideo = document.getElementById("remote");
+                                if (!remoteVideoEnabled) {
+                                    remoteVideo.style.display = "none";
+                                    log("Caméra distante coupée par l'autre utilisateur");
+                                } else {
+                                    remoteVideo.style.display = "";
+                                    log("Caméra distante réactivée par l'autre utilisateur");
+                                }
+                            }
+                            if (msg.data.audio !== undefined) {
+                                remoteAudioEnabled = msg.data.audio;
+                                if (!remoteAudioEnabled) {
+                                    log("Micro distant coupé par l'autre utilisateur");
+                                } else {
+                                    log("Micro distant réactivé par l'autre utilisateur");
+                                }
+                                document.getElementById("remote").muted = !remoteAudioEnabled;
+                            }
+                        }
+                    } catch (error) {
+                        log("❌ Erreur traitement message WebSocket: " + error);
+                    }
+                };
+            };
+
+            async function ensurePeerConnection() {
+                if (pc) return;
+                pc = new RTCPeerConnection({
+                    iceServers: [
+                        // STUN servers pour découvrir l'IP publique
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        
+                        // TURN servers pour contourner les firewalls/NAT stricts
+                        {
+                            urls: 'turn:a.relay.metered.ca:80',
+                            username: 'a5c5d4e6c2b1a8f4e0d3c7b9',
+                            credential: 'YWxhZGRpbjpvcGVuc2VzYW1l'
+                        },
+                        {
+                            urls: 'turn:a.relay.metered.ca:80?transport=tcp',
+                            username: 'a5c5d4e6c2b1a8f4e0d3c7b9',
+                            credential: 'YWxhZGRpbjpvcGVuc2VzYW1l'
+                        },
+                        {
+                            urls: 'turn:a.relay.metered.ca:443',
+                            username: 'a5c5d4e6c2b1a8f4e0d3c7b9',
+                            credential: 'YWxhZGRpbjpvcGVuc2VzYW1l'
+                        }
+                    ],
+                    iceCandidatePoolSize: 10
+                });
+                // PATCH: reset remoteDescSet à chaque nouvelle PeerConnection
+                remoteDescSet = false;
+                localStream
+                    .getTracks()
+                    .forEach((track) => pc.addTrack(track, localStream));
+                // Log de l'état de la PeerConnection
+                pc.onconnectionstatechange = () => {
+                    log("État PeerConnection: " + pc.connectionState);
+                };
+                pc.oniceconnectionstatechange = () => {
+                    log("État connexion ICE: " + pc.iceConnectionState);
+                    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                        log("🎉 Connexion WebRTC établie avec succès !");
+                    } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                        log("❌ Connexion WebRTC échouée ou déconnectée");
+                    }
+                };
+                pc.onicegatheringstatechange = () => {
+                    log("État collecte ICE: " + pc.iceGatheringState);
+                    if (pc.iceGatheringState === 'gathering') {
+                        log("🔍 Collecte ICE commencée");
+                    } else if (pc.iceGatheringState === 'complete') {
+                        log("✅ Collecte ICE terminée");
+                    }
+                };
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        log(`ICE candidat: ${e.candidate.candidate}`);
+                        // Ne pas envoyer si pas de target
+                        if (remoteUserId && ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(
+                                JSON.stringify({
+                                    type: "candidate",
+                                    data: e.candidate,
+                                    target: remoteUserId
+                                }),
+                            );
+                        } else {
+                            log("⚠️ ICE candidat non envoyé - pas de target ou WS fermé");
+                        }
+                    } else {
+                        log("✅ Fin des candidats ICE");
+                    }
+                };
+                pc.ontrack = (e) => {
+                    log('Nombre de streams reçus: ' + e.streams.length);
+                    log('Nombre de pistes dans le stream: ' + e.streams[0]?.getTracks().length);
+                    const remoteVideo = document.getElementById("remote");
+                    remoteVideo.srcObject = null;
+                    remoteVideo.srcObject = e.streams[0];
+                    log("Flux distant reçu");
+                    log("Pistes distantes: " + e.streams[0].getTracks().map(t => t.kind + ':' + t.enabled).join(', '));
+                    
+                    // Vérifier que la vidéo se joue
+                    remoteVideo.onloadedmetadata = () => {
+                        log("Métadonnées vidéo distante chargées, lecture...");
+                        remoteVideo.play().catch(e => log("Erreur lecture vidéo distante: " + e));
+                    };
+                };
+                pc.onnegotiationneeded = async () => {
+                    if (makingOffer) return;
+                    // Ne pas négocier si pas de target
+                    if (!remoteUserId) {
+                        log("⚠️ Négociation ignorée - pas de remoteUserId");
+                        return;
+                    }
+                    if (!ws || ws.readyState !== WebSocket.OPEN) {
+                        log("⚠️ Négociation ignorée - WebSocket fermé");
+                        return;
+                    }
+                    
+                    makingOffer = true;
+                    try {
+                        const offer = await pc.createOffer();
+                        await pc.setLocalDescription(offer);
+                        ws.send(
+                            JSON.stringify({
+                                type: "offer",
+                                data: pc.localDescription,
+                                target: remoteUserId
+                            }),
+                        );
+                        log("Offre envoyée (négociation nécessaire)");
+                    } catch (e) {
+                        log("Erreur de négociation: " + e);
+                    } finally {
+                        makingOffer = false;
+                    }
+                };
+                log("PeerConnection créée");
+            }
+
+            function setupToggleButtons() {
+                document.getElementById("toggleVideo").onclick = function () {
+                    if (!localStream) return;
+                    videoEnabled = !videoEnabled;
+                    localStream.getVideoTracks().forEach((track) => {
+                        track.enabled = videoEnabled;
+                    });
+                    log("Caméra " + (videoEnabled ? "activée" : "coupée"));
+                    // Envoie la commande au peer distant
+                    ws.send(JSON.stringify({ type: "remote-control", data: { video: videoEnabled } }));
+                };
+
+                document.getElementById("toggleAudio").onclick = function () {
+                    if (!localStream) return;
+                    audioEnabled = !audioEnabled;
+                    localStream.getAudioTracks().forEach((track) => {
+                        track.enabled = audioEnabled;
+                    });
+                    log("Micro " + (audioEnabled ? "activé" : "coupé"));
+                    // Envoie la commande au peer distant
+                    ws.send(JSON.stringify({ type: "remote-control", data: { audio: audioEnabled } }));
+                };
+            }
+        </script>
+    </body>
+</html>

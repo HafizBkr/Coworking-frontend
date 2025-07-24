@@ -37,7 +37,7 @@ export async function createTask(formData: FormData, projectId: string, workspac
             return {
                 success: true,
                 message: "La tâche a été créée avec succès.",
-                data: nouvelleTache,
+                data: res.data.data || null, // Assurez-vous que la réponse contient les données de la tâche créée
             };
         } else {
         return {
@@ -91,18 +91,21 @@ export async function updateTask(statut: string, taskId: string): Promise<APIRes
 }
 
 
-export async function assignTask(taskId: string, userId: string): Promise<APIResponse> {
+export async function assignTask(taskId: string, userId: string, workspaceId: string): Promise<APIResponse> {
+    console.log({taskId, userId, workspaceId})
+    console.log(`/tasks/workspaces/${workspaceId}/tasks/${taskId}/assign`)
     try {
-        const res = await api.patch(`/tasks/tasks/${taskId}/assign`, {
+        const res = await api.patch(`/tasks/workspaces/${workspaceId}/tasks/${taskId}/assign`, {
             userId,
         });
 
-        console.log({res: res.data})
+        console.log({res: res.data, taskId, userId})
 
         if (res.status === 200) {
             return {
                 success: true,
                 message: "La tâche a été assignée avec succès.",
+                data: res.data.data,
             };
         } else {
             return {

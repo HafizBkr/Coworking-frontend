@@ -14,6 +14,7 @@ export function useActiveUsersWorkspaces() {
         if(currentWorkspace?._id){
             getActiveUsersWorkspaces(currentWorkspace._id)
             .then((data)=>{
+                console.log({data})
                 setMembersActive(data.data as User[]);
                 setError(data.error||"");
             })

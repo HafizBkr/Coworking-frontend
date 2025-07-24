@@ -9,10 +9,10 @@ import React, { useState, useEffect } from 'react'
 import { useChat, type ChatMessage } from '../_hooks/use-chat';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useChatIdStore } from '@/stores/chat-id.store';
+import { useChatUsernameStore } from '@/stores/chat-username.store';
 
 export function ChatDetailComponent() {
-  const { chatId } = useChatIdStore();
+  const { username } = useChatUsernameStore();
   const { 
     messages, 
     isConnected, 
@@ -35,7 +35,7 @@ export function ChatDetailComponent() {
   // Effacer le message d'entrée lors du changement de chat
   useEffect(() => {
     setMessageInput('');
-  }, [chatId]);
+  }, [username]);
   
   const handleSendMessage = () => {
     if (messageInput.trim()) {
@@ -76,7 +76,7 @@ export function ChatDetailComponent() {
   };
 
   // Si aucun chat n'est sélectionné, afficher le composant placeholder
-  if (!chatId) {
+  if (!username) {
     return <ChatPlaceholder />;
   }
 
@@ -131,7 +131,7 @@ interface ChatHeaderProps {
 export function ChatHeader({ isConnected, onReconnect, reconnecting }: ChatHeaderProps) {
     const avatar = createAvatar(glass);
     const svg = avatar.toDataUri()
-    const { clearChatId } = useChatIdStore();
+    const { clearUsername } = useChatUsernameStore();
     return (
         <div className='flex items-center p-2 h-16 shrink-0 sticky top-0 z-10 bg-background justify-between border-b'>
             <div className='flex items-center gap-2'>
@@ -164,7 +164,7 @@ export function ChatHeader({ isConnected, onReconnect, reconnecting }: ChatHeade
             </div>
             <div className='flex items-center gap-2'>
                 <Button 
-                onClick={() => clearChatId()}
+                onClick={() => clearUsername()}
                 size={"icon"}
                 className='rounded-full'
                 variant={'ghost'}>

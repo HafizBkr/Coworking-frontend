@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>WebRTC Participant</title>
+    <style>
+        video { width: 300px; margin: 10px; background: #222; }
+        #log { white-space: pre; background: #eee; padding: 10px; height: 200px; overflow: auto; }
+        button { margin: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Rejoindre une réunion WebRTC</h2>
+    <div>
+        Room ID: <input id="room" value="YOUR_ROOM_ID" size="40" /> Token:
+        <input id="token" value="YOUR_JWT_TOKEN" size="60" />
+        <button id="join">Rejoindre</button>
+    </div>
+    <div>
+        <video id="local" autoplay muted playsinline></video>
+        <video id="remote" autoplay playsinline></video>
+    </div>
+    <div>
+        <button id="toggleVideo">Activer/Désactiver Caméra</button>
+        <button id="toggleAudio">Activer/Désactiver Micro</button>
+    </div>
+    <div id="log"></div>
+    <script>
+        let ws, pc;
+        let localStream;
+        let videoEnabled = true;
+        let audioEnabled = true;
+        let remoteVideoEnabled = true;
+        let remoteAudioEnabled = true;
+        let remoteDescSet = false;
+        let pendingCandidates = [];
+        let remoteUserId = null;
+        let pendingNegotiation = false; // Flag pour la négociation en attente
+        let keepAliveInterval = null;
+        const log = (msg) => {
+            document.getElementById("log").textContent += msg + "\n";
+        };
+
+        document.getElementById("join").onclick = async () => {
+            const room = document.getElementById("room").value;
+            const token = document.getElementById("token").value;
+            const wsUrl = `wss://visoconf-service-go.onrender.com/ws/room/${room}?token=${token}`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = async () => {
+                log("🔗 WebSocket connecté (participant)");
+                log("🔗 Room: " + room + " | Token: " + token.substring(0, 20) + "...");
+                
+                // Implement keepalive to prevent disconnections
+                keepAliveInterval = setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: "ping", timestamp: Date.now() }));
+                        log("💓 Keepalive ping sent");
+                    }
+                }, 30000); // Send ping every 30 seconds
+                
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    document.getElementById("local").srcObject = localStream;
+                    log("📹 Média local obtenu");
+                    log("Pistes locales: " + localStream.getTracks().map(t => t.kind + ':' + t.enabled).join(', '));
+                    setupToggleButtons();
+                    // Créer PeerConnection immédiatement
+                    await ensurePeerConnection();
+                    log("✅ Prêt pour négociation WebRTC");
+                    
+                    // Démarrer la négociation en attente s'il y en a une
+                    if (pendingNegotiation && remoteUserId) {
+                        log("🚀 Reprise de la négociation différée avec: " + remoteUserId);
+                        await startNegotiation();
+                        pendingNegotiation = false;
+                    }
+                } catch (error) {
+                    log("❌ Erreur média: " + error);
+                }
+            };
+            ws.onclose = () => {
+                log("WebSocket fermé");
+                // Clean up keepalive interval
+                if (keepAliveInterval) {
+                    clearInterval(keepAliveInterval);
+                    keepAliveInterval = null;
+                }
+            };
+            ws.onerror = (e) => log("Erreur WebSocket: " + JSON.stringify(e));
+
+            ws.onmessage = async (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    log("📨 WS <- " + JSON.stringify(msg, null, 2));
+                    
+                    // Récupère l'userID du peer distant et démarre la négociation
+                    if (msg.type === "peer_joined" && msg.from) {
+                        remoteUserId = msg.from;
+                        log("🆕 Peer distant détecté: " + remoteUserId);
+                    }
+                    
+                    // IMPORTANT: Démarre la négociation si des peers existent déjà
+                    if (msg.type === "existing_peers" && msg.data.length > 0) {
+                        remoteUserId = msg.data[0].userID;
+                        log("👥 Peer existant détecté: " + remoteUserId);
+                        
+                        if (localStream) {
+                            log("🚀 LocalStream disponible, démarrage immédiat de la négociation...");
+                            await ensurePeerConnection();
+                            await startNegotiation();
+                        } else {
+                            log("⏳ LocalStream non disponible, négociation différée...");
+                            pendingNegotiation = true;
+                        }
+                    }
+                    
+                    // Gestion du message participants - débogage amélioré
+                    if (msg.type === "participants") {
+                        log("👥 Participants reçus: " + msg.data.length + " participant(s)");
+                        msg.data.forEach(p => log("   - " + p.username + " (" + p.userID + ")"));
+                        
+                        // Si plus d'un participant et pas encore de connexion établie
+                        if (msg.data.length > 1 && (!pc || !pc.localDescription)) {
+                            // Trouve l'autre participant (pas nous)
+                            const otherPeer = msg.data.find(p => p.userID !== msg.from);
+                            if (otherPeer && !remoteUserId) {
+                                remoteUserId = otherPeer.userID;
+                                log("🎯 Participant détecté: " + remoteUserId);
+                                
+                                if (localStream) {
+                                    log("🚀 LocalStream disponible, démarrage immédiat de la négociation...");
+                                    await ensurePeerConnection();
+                                    await startNegotiation();
+                                } else {
+                                    log("⏳ LocalStream non disponible, négociation différée...");
+                                    pendingNegotiation = true;
+                            }
+                        }
+                    } else if (msg.data.length === 1) {
+                        // On est le seul dans la room, on attend qu'un autre participant arrive
+                        log("👤 Seul dans la room, attente d'un autre participant...");
+                    }
+                }
+                
+                // Démarrage de négociation quand un nouveau peer arrive
+                if (msg.type === "peer_joined") {
+                    log("🆕 Nouveau participant: " + msg.from);
+                    if (!remoteUserId && (!pc || !pc.localDescription)) {
+                        remoteUserId = msg.from;
+                        log("🎯 Démarrage avec nouveau participant: " + remoteUserId);
+                        
+                        if (localStream) {
+                            await ensurePeerConnection();
+                            await startNegotiation();
+                        } else {
+                            log("⏳ LocalStream non disponible, négociation différée...");
+                            pendingNegotiation = true;
+                        }
+                    }
+                }
+                
+                // Le participant attend l'offre !
+                if (msg.type === "offer") {
+                    log("Offre reçue, création de la réponse...");
+                    await ensurePeerConnection();
+                    try {
+                        await pc.setRemoteDescription(new RTCSessionDescription(msg.data));
+                        remoteDescSet = true;
+                        for (const c of pendingCandidates) {
+                            try { await pc.addIceCandidate(c); } catch (e) { log("Erreur ajout ICE: " + e); }
+                        }
+                        pendingCandidates = [];
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        
+                        // Protect against WebSocket disconnections when sending answers
+                        const targetUser = msg.from || remoteUserId;
+                        if (ws && ws.readyState === WebSocket.OPEN && targetUser) {
+                            ws.send(JSON.stringify({ type: "answer", data: pc.localDescription, target: targetUser }));
+                            log("Réponse envoyée");
+                        } else {
+                            log("❌ Answer not sent - WebSocket not ready or no target");
+                            log(`   WebSocket state: ${ws ? ws.readyState : 'null'}, target: ${targetUser}`);
+                        }
+                    } catch (e) {
+                        log("Erreur SDP: " + e);
+                    }
+                }
+                if (msg.type === "candidate") {
+                    await ensurePeerConnection();
+                    const candidate = new RTCIceCandidate(msg.data);
+                    if (remoteDescSet) {
+                        try { await pc.addIceCandidate(candidate); } catch (e) { log("Erreur ajout ICE: " + e); }
+                    } else {
+                        pendingCandidates.push(candidate);
+                    }
+                }
+                // Gestion des commandes de flux distant
+                if (msg.type === "remote-control") {
+                    if (msg.data.video !== undefined) {
+                        remoteVideoEnabled = msg.data.video;
+                        const remoteVideo = document.getElementById("remote");
+                        if (!remoteVideoEnabled) {
+                            remoteVideo.style.display = "none";
+                            log("Caméra distante coupée par l'autre utilisateur");
+                        } else {
+                            remoteVideo.style.display = "";
+                            log("Caméra distante réactivée par l'autre utilisateur");
+                        }
+                    }
+                    if (msg.data.audio !== undefined) {
+                        remoteAudioEnabled = msg.data.audio;
+                        if (!remoteAudioEnabled) {
+                            log("Micro distant coupé par l'autre utilisateur");
+                        } else {
+                            log("Micro distant réactivé par l'autre utilisateur");
+                        }
+                        // Note: Pour couper le son, on peut mute le remote video
+                        document.getElementById("remote").muted = !remoteAudioEnabled;
+                    }
+                }
+                } catch (error) {
+                    log("❌ Erreur traitement message WebSocket: " + error);
+                    log("❌ Message brut: " + event.data);
+                }
+            };
+        };
+
+        async function ensurePeerConnection() {
+            if (pc) {
+                log("PeerConnection existe déjà");
+                return;
+            }
+            pc = new RTCPeerConnection({
+                iceServers: [
+                    // STUN servers pour découvrir l'IP publique
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    
+                    // TURN servers pour contourner les firewalls/NAT stricts
+                    {
+                        urls: 'turn:a.relay.metered.ca:80',
+                        username: 'a5c5d4e6c2b1a8f4e0d3c7b9',
+                        credential: 'YWxhZGRpbjpvcGVuc2VzYW1l'
+                    },
+                    {
+                        urls: 'turn:a.relay.metered.ca:80?transport=tcp',
+                        username: 'a5c5d4e6c2b1a8f4e0d3c7b9',
+                        credential: 'YWxhZGRpbjpvcGVuc2VzYW1l'
+                    },
+                    {
+                        urls: 'turn:a.relay.metered.ca:443',
+                        username: 'a5c5d4e6c2b1a8f4e0d3c7b9',
+                        credential: 'YWxhZGRpbjpvcGVuc2VzYW1l'
+                    }
+                ],
+                iceCandidatePoolSize: 10
+            });
+            remoteDescSet = false;
+            
+            // Ajouter les pistes locales si disponibles
+            if (localStream) {
+                localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+                log("Pistes locales ajoutées à PeerConnection");
+            } else {
+                log("⚠️ LocalStream non disponible pour PeerConnection");
+            }
+            
+            pc.onconnectionstatechange = () => {
+                log("État PeerConnection: " + pc.connectionState);
+            };
+            pc.oniceconnectionstatechange = () => {
+                log("État connexion ICE: " + pc.iceConnectionState);
+                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                    log("🎉 Connexion WebRTC établie avec succès !");
+                } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+                    log("❌ Connexion WebRTC échouée ou déconnectée");
+                }
+            };
+            pc.onicegatheringstatechange = () => {
+                log("État collecte ICE: " + pc.iceGatheringState);
+                if (pc.iceGatheringState === 'gathering') {
+                    log("🔍 Collecte ICE commencée");
+                } else if (pc.iceGatheringState === 'complete') {
+                    log("✅ Collecte ICE terminée");
+                }
+            };
+            pc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    log(`ICE candidat: ${e.candidate.candidate}`);
+                    // Protect against WebSocket disconnections when sending ICE candidates
+                    if (ws && ws.readyState === WebSocket.OPEN && remoteUserId) {
+                        ws.send(JSON.stringify({ type: "candidate", data: e.candidate, target: remoteUserId }));
+                    } else {
+                        log("❌ ICE candidate not sent - WebSocket not ready or no target");
+                        log(`   WebSocket state: ${ws ? ws.readyState : 'null'}, remoteUserId: ${remoteUserId}`);
+                    }
+                } else {
+                    log("✅ Fin des candidats ICE");
+                }
+            };
+            pc.ontrack = (e) => {
+                log('Nombre de streams reçus: ' + e.streams.length);
+                log('Nombre de pistes dans le stream: ' + e.streams[0]?.getTracks().length);
+                const remoteVideo = document.getElementById("remote");
+                remoteVideo.srcObject = null;
+                remoteVideo.srcObject = e.streams[0];
+                log("Flux distant reçu");
+                log("Pistes distantes: " + e.streams[0].getTracks().map(t => t.kind + ':' + t.enabled).join(', '));
+                remoteVideo.onloadedmetadata = () => {
+                    log("Métadonnées vidéo distante chargées, lecture...");
+                    remoteVideo.play().catch(e => log("Erreur lecture vidéo distante: " + e));
+                };
+            };
+            log("PeerConnection créée");
+        }
+
+        // Fonction pour démarrer la négociation WebRTC
+        async function startNegotiation() {
+            if (!localStream) {
+                log("❌ Impossible de démarrer la négociation - LocalStream manquant");
+                return;
+            }
+            if (!remoteUserId) {
+                log("❌ Impossible de démarrer la négociation - RemoteUserId manquant");
+                return;
+            }
+            
+            try {
+                log("🚀 Création de l'offre vers: " + remoteUserId);
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                // Protect against WebSocket disconnections when sending offers
+                if (ws && ws.readyState === WebSocket.OPEN && remoteUserId) {
+                    ws.send(JSON.stringify({ 
+                        type: "offer", 
+                        data: pc.localDescription, 
+                        target: remoteUserId 
+                    }));
+                    log("✅ Offre envoyée vers: " + remoteUserId);
+                } else {
+                    log("❌ Offer not sent - WebSocket not ready or no target");
+                    log(`   WebSocket state: ${ws ? ws.readyState : 'null'}, remoteUserId: ${remoteUserId}`);
+                }
+            } catch (e) {
+                log("❌ Erreur lors de la création de l'offre: " + e);
+            }
+        }
+
+        function setupToggleButtons() {
+            document.getElementById("toggleVideo").onclick = function () {
+                if (!localStream) return;
+                videoEnabled = !videoEnabled;
+                localStream.getVideoTracks().forEach((track) => {
+                    track.enabled = videoEnabled;
+                });
+                log("Caméra " + (videoEnabled ? "activée" : "coupée"));
+                // Envoie la commande au peer distant
+                ws.send(JSON.stringify({ type: "remote-control", data: { video: videoEnabled } }));
+            };
+            document.getElementById("toggleAudio").onclick = function () {
+                if (!localStream) return;
+                audioEnabled = !audioEnabled;
+                localStream.getAudioTracks().forEach((track) => {
+                    track.enabled = audioEnabled;
+                });
+                log("Micro " + (audioEnabled ? "activé" : "coupé"));
+                // Envoie la commande au peer distant
+                ws.send(JSON.stringify({ type: "remote-control", data: { audio: audioEnabled } }));
+            };
+        }
+    </script>
+</body>
+</html>

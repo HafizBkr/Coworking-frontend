@@ -1,5 +1,5 @@
 "use client";
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useChatIdStore } from '@/stores/chat-id.store';
 import { useChatGeneral } from '../_hooks/use-chat-general';
 import { useChat } from '../_hooks/use-chat';
@@ -7,6 +7,7 @@ import { WifiIcon, WifiOffIcon } from 'lucide-react';
 import { createChatPrivate } from '../_services/chat.service';
 import { useWorkspaceStore } from '@/stores/workspace.store';
 import { useChatUsernameStore } from '@/stores/chat-username.store';
+import { useSession } from '@/hooks/use-session';
 
 interface Chat {
     _id: string
@@ -46,10 +47,15 @@ export function ChatComponent() {
 
 function ChatItem({ chat, isGeneral }: { chat: Chat, isGeneral?: boolean }) {
   const { setChatId, clearChatId } = useChatIdStore();
-  const { setUsername, username } = useChatUsernameStore();
+  const { setUsername, username, clearUsername } = useChatUsernameStore();
   const isSelected =  username === chat.name;
   const { currentWorkspace } = useWorkspaceStore();
   const workspaceId = currentWorkspace?._id || "";  
+
+  useEffect(()=>{
+    clearUsername();
+    clearChatId();
+  },[])
 
   async function handleChatClick() {
     
@@ -100,6 +106,7 @@ function ChatItem({ chat, isGeneral }: { chat: Chat, isGeneral?: boolean }) {
 
 function ChatList() {
   const { chatGeneral,isLoading, error } = useChatGeneral();
+  const { user } = useSession();
 
 
   if (isLoading) {
@@ -139,7 +146,9 @@ function ChatList() {
             }}/>
         )}
 
-        {chatGeneral.participants?.map((participant) => (
+        {chatGeneral.participants?.
+        filter((participant)=> participant.username !== user?.username )
+        .map((participant) => (
           <ChatItem key={participant._id} chat={{
             _id: participant._id,
             name: participant.username,

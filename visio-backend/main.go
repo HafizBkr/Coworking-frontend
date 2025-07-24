@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"go-visio-service/handlers"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	// "go.mongodb.org/mongo-driver/bson"
 	// "go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/gin-contrib/cors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -39,6 +41,14 @@ func main() {
 
 	// Initialiser Gin
 	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false,
+	}))
 
 	// Endpoint de santé
 	r.GET("/health", func(c *gin.Context) {
@@ -73,6 +83,13 @@ func main() {
 	// Routes de visio
 	r.POST("/api/visio/room", handlers.CreateRoomHandler())
 	r.GET("/ws/room/:id", handlers.SignalHandler())
+	r.GET("/workspaces/:workspaceId/rooms", handlers.ListRoomsByWorkspaceHandler())
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET n'est pas défini dans l'environnement")
+	}
+	fmt.Printf("JWT_SECRET from env: [%s]\n", jwtSecret)
 
 	// Lancer le serveur
 	err = r.Run(":8081")

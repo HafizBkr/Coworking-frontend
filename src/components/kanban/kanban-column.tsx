@@ -5,18 +5,18 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { TaskCard } from "./task-card"
 import type { Task, Status, Column } from "@/types/kanban"
-import { Loader } from "../customs/loader"
+// import { Loader } from "../customs/loader"
 
 interface KanbanColumnProps {
   column: Column
   tasks: Task[]
   onMoveTask: (taskId: string, newStatus: Status) => void
   onDeleteTask: (taskId: string) => void
-  onAssignTask: (taskId: string, assignee: string) => void
+  // onAssignTask: (taskId: string, assignee: string) => Promise<void>
   loading: boolean
 }
 
-export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, onAssignTask, loading }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, loading }: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -53,7 +53,7 @@ export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, onAssign
       </div>
 
       <div
-        className={`p-4 space-y-3 min-h-[500px] transition-colors duration-200 ${
+        className={`p-4 space-y-3 h-[500px] overflow-y-auto transition-colors duration-200 ${
           isDragOver ? "dark:bg-secondary border-2 border-dashed border-blue-500" : ""
         }`}
         onDragOver={handleDragOver}
@@ -66,22 +66,20 @@ export function KanbanColumn({ column, tasks, onMoveTask, onDeleteTask, onAssign
           </div>
         )}
 
-        {loading ? (
-          <div className="flex items-center justify-center h-96">
-            <Loader/>
-          </div>
-        ) : (
-          tasks.map((task) => (
+        {/* {loading ? (
+          null
+        ) : ( */}
+          {tasks.map((task) => (
             <TaskCard
               key={task._id}
               task={task}
-              onAssignTask={onAssignTask}
+              // onAssignTask={onAssignTask}
               onMoveTask={onMoveTask}
               onDeleteTask={onDeleteTask}
               currentStatus={column.id}
             />
-          ))
-        )}
+          ))}
+        {/* )} */}
       </div>
     </div>
   )
